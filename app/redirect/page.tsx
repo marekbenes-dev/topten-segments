@@ -1,6 +1,8 @@
+"use client";
+
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect } from "react";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation";
 
 const RedirectPage = () => {
   const { replace } = useRouter();
