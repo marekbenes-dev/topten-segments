@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect } from "react";
+import { Suspense, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 const RedirectPage = () => {
@@ -36,15 +36,17 @@ const RedirectPage = () => {
   }, [signin]);
 
   return (
-    <div className="container mx-auto pt-10">
-      <div className="bg-slate-800 rounded-lg px-6 py-8 text-white">
-        <div className="w-11/12 m-auto">
-          <p className="font-title text-shamrock text-center text-2xl">
-            Signing in, you&apos;ll be redirected...
-          </p>
+    <Suspense fallback={<p>Loading…</p>}>
+       <div className="container mx-auto pt-10">
+        <div className="bg-slate-800 rounded-lg px-6 py-8 text-white">
+          <div className="w-11/12 m-auto">
+            <p className="font-title text-shamrock text-center text-2xl">
+              Signing in, you&apos;ll be redirected...
+            </p>
+          </div>
         </div>
       </div>
-    </div>
+    </Suspense>
   );
 };
 
