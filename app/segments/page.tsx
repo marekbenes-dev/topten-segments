@@ -21,7 +21,7 @@ async function exchangeCodeForToken(code: string) {
     }),
     cache: "no-store",
   });
-  if (!res.ok) throw new Error("Token exchange failed");
+  if (!res.ok) throw new Error(`Token exchange failed, this is the response: ${JSON.stringify(res)}`);
   return (await res.json()) as StravaTokenResponse;
 }
 
