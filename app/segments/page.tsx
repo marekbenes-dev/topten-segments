@@ -12,8 +12,7 @@ type StravaTokenResponse = {
 async function exchangeCodeForToken(code: string) {
   const res = await fetch("https://www.strava.com/api/v3/oauth/token", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    // IMPORTANT: keep secrets on the server
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: JSON.stringify({
       client_id: process.env.STRAVA_CLIENT_ID,
       client_secret: process.env.STRAVA_CLIENT_SECRET,
