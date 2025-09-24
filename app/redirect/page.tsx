@@ -1,13 +1,12 @@
-import { getCookie,setCookie } from "cookies-next/client";
+import { setCookie } from "cookies-next/client";
 import { redirect } from "next/navigation";
 
-export default async function RedirectPage({ searchParams }: { searchParams: { code?: string; error?: string } }) {
-  if (searchParams.error) redirect(`/?error=${encodeURIComponent(searchParams.error)}`);
-
+export default async function RedirectPage({ searchParams }: { searchParams: { code?: string} }) {
   const code = searchParams.code;
 
+  console.log("OAuth redirect, code =", code);
+
   if (!code) redirect("/?error=missing_code");
-  // TODO (recommended): validate `state` matches what you issued before redirecting to Strava
 
   type StravaTokenResponse = {
     access_token: string;
