@@ -2,42 +2,6 @@
 import { setCookie } from "cookies-next";
 import { redirect } from "next/navigation";
 
-type StravaTokenResponse = {
-  access_token: string;
-  refresh_token: string;
-  expires_at: number; // epoch seconds
-  athlete: { id: number };
-};
-
-async function exchangeCodeForToken(code: string) {
-  const { CLIENT_ID, CLIENT_SECRET } = process.env;
-
-  if (!CLIENT_ID || !CLIENT_SECRET) {
-    throw new Error("Missing CLIENT_ID or CLIENT_SECRET in Vercel environment properties.");
-  }
-
-  const params = new URLSearchParams({
-    client_id: CLIENT_ID,
-    client_secret: CLIENT_SECRET,
-    code,
-    grant_type: "authorization_code",
-  });
-
-  const res = await fetch("https://www.strava.com/api/v3/oauth/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: params,
-    cache: "no-store",
-  });
-
-  if (!res.ok) {
-    console.error("Strava token exchange failed", res);
-    throw new Error(`Token exchange failed, this is the response: ${JSON.stringify(res)}`); 
-  }
-  
-  return (await res.json()) as StravaTokenResponse;
-}
-
 async function getStarredSegments(accessToken: string) {
   const res = await fetch(
     "https://www.strava.com/api/v3/segments/starred?page=1&per_page=30",
@@ -50,7 +14,7 @@ async function getStarredSegments(accessToken: string) {
   return res.json(); // array of segments
 }
 
-export default async function RedirectPage({
+export default async function SegmentsPage({
   searchParams,
 }: {
   searchParams: { code?: string; state?: string; error?: string };
@@ -61,9 +25,6 @@ export default async function RedirectPage({
   if (!code) redirect("/?error=missing_code");
 
   // TODO (recommended): validate `state` matches what you issued before redirecting to Strava
-
-  // 2) Exchange code → tokens (server)
-  const token = await exchangeCodeForToken(code);
 
   // 3) Store token securely (httpOnly cookie). Or write to DB keyed by user.
   const secondsToExpiry = token.expires_at - Math.floor(Date.now() / 1000);
@@ -84,10 +45,11 @@ export default async function RedirectPage({
     <div className="container mx-auto p-6">
       <h1 className="text-xl font-bold">Your starred segments</h1>
       <ul className="mt-4 space-y-3">
-        {segments.map((s: DetailedSegment) => (
+        {segments.filter(s => s.activity_type === 'RUN').map((s: DetailedSegment) => (
           <li key={s.id} className="border rounded-lg p-3">
             <div className="font-medium">{s.name}</div>
             <div className="text-sm opacity-70">Distance: {Math.round(s.distance)} m</div>
+            <div className="text-sm opacity-70">Your PR: {s.athlete_pr_effort.elapsed_time}</div>
             <div className="text-sm opacity-70">Avg Grade: {s.effort_count}%</div>
           </li>
         ))}

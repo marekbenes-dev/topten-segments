@@ -14,6 +14,12 @@ type SummaryPRSegmentEffort = {
   is_kom: boolean;
 };
 
+type Xoms = {
+  kom?: string; // seconds, but returned as a string (e.g. "130")
+  qom?: string; // "
+  cr?: string;  // "
+};
+
 type SummarySegmentEffort = {
   id: number;
   activity_id: number;
@@ -56,4 +62,5 @@ type DetailedSegment = {
   athlete_count: number;
   hazardous: boolean;
   star_count: number;
+  xoms?: Xoms
 };
