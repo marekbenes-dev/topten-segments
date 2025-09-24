@@ -60,5 +60,5 @@ export default async function RedirectPage({ searchParams }: { searchParams: { c
     sameSite: "lax",  
   });
 
-  redirect("/menu");
+  //redirect("/menu");
 }
