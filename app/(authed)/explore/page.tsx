@@ -35,7 +35,7 @@ export default async function ExplorePage() {
   });
 
   if (!res.ok) {
-    console.error("Explore failed", await res.text());
+    console.error("Explore failed", JSON.stringify(res), token);
     redirect("/menu?error=explore_failed");
   }
 
