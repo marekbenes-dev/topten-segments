@@ -1,5 +1,5 @@
 // app/redirect/page.tsx
-import { setCookie } from "cookies-next";
+import { getCookie } from "cookies-next";
 import { redirect } from "next/navigation";
 
 async function getStarredSegments(accessToken: string) {
@@ -26,26 +26,21 @@ export default async function SegmentsPage({
 
   // TODO (recommended): validate `state` matches what you issued before redirecting to Strava
 
-  // 3) Store token securely (httpOnly cookie). Or write to DB keyed by user.
-  const secondsToExpiry = token.expires_at - Math.floor(Date.now() / 1000);
-  setCookie("strava_access_token", token.access_token, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: Math.max(0, secondsToExpiry),
-  });
-  // If you want refresh later, also store token.refresh_token (prefer DB).
 
-  // 4) Server-fetch starred segments
-  const segments = await getStarredSegments(token.access_token);
+  const token = await getCookie("strava_access_token");
+
+  if (!token) {
+    redirect("/?error=missing_token");
+  }
+
+  const segments = await getStarredSegments(token);
 
   // 5) Render (or do `redirect('/dashboard')` after saving to DB)
   return (
     <div className="container mx-auto p-6">
       <h1 className="text-xl font-bold">Your starred segments</h1>
       <ul className="mt-4 space-y-3">
-        {segments.filter(s => s.activity_type === 'RUN').map((s: DetailedSegment) => (
+        {segments.map((s: DetailedSegment) => (
           <li key={s.id} className="border rounded-lg p-3">
             <div className="font-medium">{s.name}</div>
             <div className="text-sm opacity-70">Distance: {Math.round(s.distance)} m</div>
