@@ -2,7 +2,7 @@ import { setCookie } from "cookies-next/client";
 import { redirect } from "next/navigation";
 
 export default async function RedirectPage({ searchParams }: { searchParams: { code?: string} }) {
-  const code = searchParams.code;
+  const code = searchParams?.code;
 
   console.log("OAuth redirect, code =", code);
 
