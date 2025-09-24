@@ -8,6 +8,15 @@ export default function ExploreLinkCard() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  const saveGeoServer = async (lat: number, lng: number, radiusKm: number) => {
+  await fetch("/api/geo", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ lat, lng, radiusKm }),
+    credentials: "include",
+  });
+};
+
   const onClick = () => {
     setErr(null);
     if (!("geolocation" in navigator)) {
@@ -16,18 +25,15 @@ export default function ExploreLinkCard() {
     }
     setLoading(true);
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
+      async (pos) => {
         setLoading(false);
+
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
         const radiusKm = 3; // tweak as you like
-        const qs = new URLSearchParams({
-          lat: String(lat),
-          lng: String(lng),
-          radius_km: String(radiusKm),
-          activity_type: "running", // or "riding"
-        });
-        router.push(`/explore?${qs.toString()}`);
+        
+        await saveGeoServer(lat, lng, radiusKm);
+        router.push('/explore');
       },
       (e) => {
         setLoading(false);

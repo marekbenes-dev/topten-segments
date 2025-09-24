@@ -2,10 +2,10 @@ import { redirect } from "next/navigation";
 import { boundsFromCenterRadius } from "../../lib/geo";
 import { cookies } from "next/headers";
 
-export default async function ExplorePage({ searchParams }: { searchParams: { code?: string } }) {
+export default async function ExplorePage() {
   const cookieStore = await cookies();
   const geoRaw = cookieStore.get("geo");
-  if (!geoRaw) redirect("/segments"); // no geo? fall back
+  if (!geoRaw) redirect("/menu"); // no geo? fall back
 
   const { lat, lng, radiusKm } = JSON.parse(decodeURIComponent(String(geoRaw)));
   const [swLat, swLng, neLat, neLng] = boundsFromCenterRadius(lat, lng, radiusKm);

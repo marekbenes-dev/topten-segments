@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ExploreLinkCard from "./ExploreLinkCard";
 
 export default function MenuPage() {
   return (
@@ -10,10 +11,7 @@ export default function MenuPage() {
           <p className="text-sm opacity-70">See your starred segments</p>
         </Link>
 
-        <Link href="/explore" className="border rounded p-4 hover:bg-gray-50">
-          <div className="text-lg font-semibold">Explore Near Me</div>
-          <p className="text-sm opacity-70">Find segments around you</p>
-        </Link>
+       <ExploreLinkCard />
 
         <Link href="/activities" className="border rounded p-4 hover:bg-gray-50">
           <div className="text-lg font-semibold">My Activities</div>
