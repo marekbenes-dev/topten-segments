@@ -4,15 +4,17 @@ import { cookies } from "next/headers";
 
 export default async function ExplorePage() {
   const cookieStore = await cookies();
+  const token = cookieStore.get("strava_access_token");
   const latCookie = cookieStore.get("strava-geo-lat");
   const lngCookie = cookieStore.get("strava-geo-lng");
 
-  if (!latCookie || !lngCookie) redirect("/menu"); // no geo? fall back
+  if (!latCookie || !lngCookie) redirect("/menu?error=no_geo"); // no geo? fall back
+
+  if (!token) redirect("/menu?error=missing_token");
 
   const [swLat, swLng, neLat, neLng] = boundsFromCenterRadius(Number(latCookie), Number(lngCookie), 5);
 
-  // 3) Call Strava Explore (server-side)
-  const token = cookieStore.get("strava_access_token");
+
   const qs = new URLSearchParams({
     bounds: `${swLat},${swLng},${neLat},${neLng}`,
     activity_type: "running", // or "riding"
@@ -25,7 +27,7 @@ export default async function ExplorePage() {
 
   if (!res.ok) {
     console.error("Explore failed", await res.text());
-    redirect("/segments?error=explore_failed");
+    redirect("/menu?error=explore_failed");
   }
 
   const data = await res.json(); // { segments: [...] }
