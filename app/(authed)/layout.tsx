@@ -1,11 +1,12 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { getCookie } from "cookies-next";
 import ExploreLinkCard from "./menu/ExploreLinkCard";
+import { cookies } from "next/headers";
 
-export default function AuthedLayout({ children }: { children: React.ReactNode }) {
-  const token = getCookie("strava_access_token");
-  if (!token) redirect("/"); // not signed in → back to landing
+export default async function AuthedLayout({ children }: { children: React.ReactNode }) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("strava_access_token");
+  if (!token) redirect("/?no_token"); // not signed in → back to landing
 
   return (
     <div className="min-h-screen">

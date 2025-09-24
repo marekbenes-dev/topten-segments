@@ -1,16 +1,17 @@
 import { redirect } from "next/navigation";
 import { boundsFromCenterRadius } from "../../lib/geo";
-import { getCookie } from "cookies-next";
+import { cookies } from "next/headers";
 
 export default async function ExplorePage({ searchParams }: { searchParams: { code?: string } }) {
-  const geoRaw = await getCookie("geo");
+  const cookieStore = await cookies();
+  const geoRaw = cookieStore.get("geo");
   if (!geoRaw) redirect("/segments"); // no geo? fall back
 
-  const { lat, lng, radiusKm } = JSON.parse(decodeURIComponent(geoRaw));
+  const { lat, lng, radiusKm } = JSON.parse(decodeURIComponent(String(geoRaw)));
   const [swLat, swLng, neLat, neLng] = boundsFromCenterRadius(lat, lng, radiusKm);
 
   // 3) Call Strava Explore (server-side)
-  const token = await getCookie("strava_access_token");
+  const token = cookieStore.get("strava_access_token");
   const qs = new URLSearchParams({
     bounds: `${swLat},${swLng},${neLat},${neLng}`,
     activity_type: "running", // or "riding"

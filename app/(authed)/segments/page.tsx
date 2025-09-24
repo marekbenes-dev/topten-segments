@@ -1,5 +1,5 @@
-// app/redirect/page.tsx
 import { getCookie } from "cookies-next";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 async function getStarredSegments(accessToken: string) {
@@ -14,20 +14,9 @@ async function getStarredSegments(accessToken: string) {
   return res.json(); // array of segments
 }
 
-export default async function SegmentsPage({
-  searchParams,
-}: {
-  searchParams: { code?: string; state?: string; error?: string };
-}) {
-  // 1) Basic sanity checks
-  if (searchParams.error) redirect(`/?error=${encodeURIComponent(searchParams.error)}`);
-  const code = searchParams.code;
-  if (!code) redirect("/?error=missing_code");
-
-  // TODO (recommended): validate `state` matches what you issued before redirecting to Strava
-
-
-  const token = await getCookie("strava_access_token");
+export default async function SegmentsPage() {
+  const cookieStore = await cookies();
+  const token = String(cookieStore.get("strava_access_token"));
 
   if (!token) {
     redirect("/?error=missing_token");

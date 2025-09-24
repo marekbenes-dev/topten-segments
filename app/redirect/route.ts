@@ -53,6 +53,7 @@ export async function GET(req: Request) {
     path: "/",
     expires,
   });
+  
   cookieStore.set("strava_refresh_token", token.refresh_token, {
     httpOnly: true,
     secure: true,
