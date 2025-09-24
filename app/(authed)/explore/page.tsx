@@ -4,11 +4,12 @@ import { cookies } from "next/headers";
 
 export default async function ExplorePage() {
   const cookieStore = await cookies();
-  const geoRaw = cookieStore.get("geo");
-  if (!geoRaw) redirect("/menu"); // no geo? fall back
+  const latCookie = cookieStore.get("strava-geo-lat");
+  const lngCookie = cookieStore.get("strava-geo-lng");
 
-  const { lat, lng, radiusKm } = JSON.parse(decodeURIComponent(String(geoRaw)));
-  const [swLat, swLng, neLat, neLng] = boundsFromCenterRadius(lat, lng, radiusKm);
+  if (!latCookie || !lngCookie) redirect("/menu"); // no geo? fall back
+
+  const [swLat, swLng, neLat, neLng] = boundsFromCenterRadius(Number(latCookie), Number(lngCookie), 5);
 
   // 3) Call Strava Explore (server-side)
   const token = cookieStore.get("strava_access_token");
