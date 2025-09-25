@@ -60,7 +60,7 @@ export default function ExploreMap({
               center={[lat, lng]}
               radius={6}
               stroke={false}
-              // default fill color (react-leaflet uses current theme, no explicit color needed)
+              color="#FC5200"
             >
               <Popup>
                 <div className="text-sm">
