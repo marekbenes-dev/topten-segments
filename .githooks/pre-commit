@@ -1,0 +1,38 @@
+#!/usr/bin/env sh
+set -eu
+
+# --- Ensure Node is on PATH (covers common managers) -------------------------
+# Homebrew (Apple Silicon / Intel)
+if ! command -v node >/dev/null 2>&1; then
+  PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+fi
+# Volta
+if ! command -v node >/dev/null 2>&1 && [ -d "$HOME/.volta/bin" ]; then
+  PATH="$HOME/.volta/bin:$PATH"
+fi
+# nvm
+if ! command -v node >/dev/null 2>&1 && [ -s "$HOME/.nvm/nvm.sh" ]; then
+  . "$HOME/.nvm/nvm.sh" >/dev/null 2>&1 || true
+  nvm use --silent >/dev/null 2>&1 || true
+fi
+# asdf
+if ! command -v node >/dev/null 2>&1 && [ -s "$HOME/.asdf/asdf.sh" ]; then
+  . "$HOME/.asdf/asdf.sh" >/dev/null 2>&1 || true
+fi
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "Error: Node.js not found in PATH inside Git hook." >&2
+  echo "Tip: install via Homebrew/Volta or load nvm/asdf in the hook." >&2
+  exit 1
+fi
+
+# Make local project binaries available (eslint, lint-staged, etc.)
+PATH="./node_modules/.bin:$PATH"
+export PATH
+
+# --- Fast checks --------------------------------------------------------------
+# If you configured lint-staged in package.json, this runs it without npx
+lint-staged
+
+npm run typecheck
+npm run lint

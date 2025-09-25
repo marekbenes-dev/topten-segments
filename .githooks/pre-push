@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export PATH="./node_modules/.bin:$PATH"
+
+yarn run typecheck &&
+yarn run lint &&
+yarn run build:verify

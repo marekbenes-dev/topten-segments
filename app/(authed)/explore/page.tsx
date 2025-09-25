@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { boundsFromCenterRadius } from "../../lib/geo";
 import { cookies } from "next/headers";
+import ExploreMap from "./ExploreMap";
 
 export default async function ExplorePage() {
   const cookieStore = await cookies();
@@ -12,11 +13,15 @@ export default async function ExplorePage() {
 
   if (!token) redirect("/menu?error=missing_token");
 
-  const [swLat, swLng, neLat, neLng] = boundsFromCenterRadius(Number(latCookie), Number(lngCookie), 5);
+  const [swLat, swLng, neLat, neLng] = boundsFromCenterRadius(
+    Number(latCookie),
+    Number(lngCookie),
+    5,
+  );
 
   const fmt = (n: number) => n.toFixed(6);
   const clampLat = (n: number) => Math.max(-90, Math.min(90, n));
-  const clampLng = (n: number) => ((n + 180) % 360 + 360) % 360 - 180; // wrap to [-180,180)
+  const clampLng = (n: number) => ((((n + 180) % 360) + 360) % 360) - 180; // wrap to [-180,180)
 
   const sw = { lat: clampLat(swLat), lng: clampLng(swLng) };
   const ne = { lat: clampLat(neLat), lng: clampLng(neLng) };
@@ -25,7 +30,7 @@ export default async function ExplorePage() {
   const url = new URL("https://www.strava.com/api/v3/segments/explore");
   url.searchParams.set(
     "bounds",
-    `${fmt(sw.lat)},${fmt(sw.lng)},${fmt(ne.lat)},${fmt(ne.lng)}`
+    `${fmt(sw.lat)},${fmt(sw.lng)},${fmt(ne.lat)},${fmt(ne.lng)}`,
   );
   url.searchParams.set("activity_type", "running"); // or "riding"
 
@@ -43,6 +48,35 @@ export default async function ExplorePage() {
   // Store results somewhere (DB/session) or redirect with a lightweight flag
   // For demo, just render:
   return (
-    <pre style={{ whiteSpace: "pre-wrap" }}>{JSON.stringify(data.segments, null, 2)}</pre>
+    <div className="container mx-auto p-6">
+      <h1 className="text-xl font-bold">Segments near you</h1>
+      <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <ExploreMap segments={data.segments || []} />
+        </div>
+
+        <aside className="border rounded-lg p-4">
+          <div className="font-semibold mb-2">List</div>
+          <ul className="space-y-2">
+            {(data.segments || []).map((s: ExploreSegment) => (
+              <li key={s.id} className="text-sm">
+                <a
+                  className="underline"
+                  href={`https://www.strava.com/segments/${s.id}`}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  {s.name}
+                </a>
+                <div className="opacity-70">
+                  {s.start_latlng?.[0]?.toFixed(4)},{" "}
+                  {s.start_latlng?.[1]?.toFixed(4)}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </aside>
+      </div>
+    </div>
   );
 }
