@@ -4,9 +4,9 @@ import { cookies } from "next/headers";
 
 export default async function ExplorePage() {
   const cookieStore = await cookies();
-  const token = cookieStore.get("strava_access_token");
-  const latCookie = cookieStore.get("strava-geo-lat");
-  const lngCookie = cookieStore.get("strava-geo-lng");
+  const token = cookieStore.get("strava_access_token")?.value;
+  const latCookie = cookieStore.get("strava-geo-lat")?.value;
+  const lngCookie = cookieStore.get("strava-geo-lng")?.value;
 
   if (!latCookie || !lngCookie) redirect("/menu?error=no_geo"); // no geo? fall back
 
@@ -28,6 +28,8 @@ export default async function ExplorePage() {
     `${fmt(sw.lat)},${fmt(sw.lng)},${fmt(ne.lat)},${fmt(ne.lng)}`
   );
   url.searchParams.set("activity_type", "running"); // or "riding"
+
+    console.log("Explore bounds:", bounds);
 
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
