@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
-  const res = NextResponse.redirect(new URL("/", req.url));
+  // using 303 see other, because it tells browser to redirect
+  const res = NextResponse.redirect(new URL("/", req.url), { status: 303 });
 
-  res.cookies.delete("strava-token");
-  res.cookies.delete("strava-refresh-token");
-  res.cookies.delete("strava-geo-lat");
-  res.cookies.delete("strava-geo-lng");
+  res.cookies.delete("strava_acces_token");
+  res.cookies.delete("strava_refresh_token");
+  res.cookies.delete("strava_geo_lat");
+  res.cookies.delete("strava_geo_lng");
 
   return res;
 }

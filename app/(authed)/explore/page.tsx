@@ -6,8 +6,8 @@ import ExploreMap from "./ExploreMap";
 export default async function ExplorePage() {
   const cookieStore = await cookies();
   const token = cookieStore.get("strava_access_token")?.value;
-  const latCookie = cookieStore.get("strava-geo-lat")?.value;
-  const lngCookie = cookieStore.get("strava-geo-lng")?.value;
+  const latCookie = cookieStore.get("strava_geo_lat")?.value;
+  const lngCookie = cookieStore.get("strava_geo_lng")?.value;
 
   if (!latCookie || !lngCookie) redirect("/menu?error=no_geo"); // no geo? fall back
 
