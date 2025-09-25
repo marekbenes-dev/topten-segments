@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-export async function GET(req: Request) {
+export async function POST(req: Request) {
   // using 303 see other, because it tells browser to redirect
   const res = NextResponse.redirect(new URL("/", req.url), { status: 303 });
 
