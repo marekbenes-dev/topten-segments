@@ -61,6 +61,7 @@ export default function ExploreMap({
               radius={6}
               stroke={false}
               color="#FC5200"
+              fillOpacity={0.8}
             >
               <Popup>
                 <div className="text-sm">
