@@ -11,9 +11,12 @@ export default function MenuPage() {
           <p className="text-sm opacity-70">See your starred segments</p>
         </Link>
 
-       <ExploreLinkCard />
+        <ExploreLinkCard />
 
-        <Link href="/activities" className="border rounded p-4 hover:bg-gray-50">
+        <Link
+          href="/activities"
+          className="border rounded p-4 hover:bg-gray-50"
+        >
           <div className="text-lg font-semibold">My Activities</div>
           <p className="text-sm opacity-70">Recent workouts</p>
         </Link>
