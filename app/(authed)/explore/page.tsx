@@ -29,8 +29,6 @@ export default async function ExplorePage() {
   );
   url.searchParams.set("activity_type", "running"); // or "riding"
 
-    console.log("Explore bounds:", bounds);
-
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
     cache: "no-store",
