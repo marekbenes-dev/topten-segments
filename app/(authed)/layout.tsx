@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
+import Link from "next/link";
 
 export default async function AuthedLayout({
   children,
@@ -15,6 +16,7 @@ export default async function AuthedLayout({
     <div className="min-h-screen">
       <nav className="border-b">
         <div className="container mx-auto p-4 flex gap-4">
+          <Link href="/">Home</Link>
           <form action="/api/auth/signout" method="post" className="ml-auto">
             <button className="underline">Sign out</button>
           </form>

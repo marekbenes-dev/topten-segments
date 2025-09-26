@@ -37,7 +37,7 @@ export default async function SegmentsPage() {
               Distance: {Math.round(s.distance)} m
             </div>
             <div className="text-sm opacity-70">
-              Your PR: {s.athlete_pr_effort.elapsed_time}
+              Your PR: {s.athlete_pr_effort?.elapsed_time / 60} mins
             </div>
             <div className="text-sm opacity-70">
               Avg Grade: {s.effort_count}%

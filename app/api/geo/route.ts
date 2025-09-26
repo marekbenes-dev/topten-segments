@@ -9,7 +9,7 @@ export async function POST(req: Request) {
     sameSite: "lax",
     path: "/",
     maxAge: 600,
-    secure: true,
+    secure: process.env.NODE_ENV === "production",
   });
 
   res.cookies.set("strava_geo_lng", lng, {
@@ -17,7 +17,7 @@ export async function POST(req: Request) {
     sameSite: "lax",
     path: "/",
     maxAge: 600,
-    secure: true,
+    secure: process.env.NODE_ENV === "production",
   });
 
   res.cookies.set("strava_geo_radius", radiusKm, {
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     sameSite: "lax",
     path: "/",
     maxAge: 600,
-    secure: true,
+    secure: process.env.NODE_ENV === "production",
   });
 
   return res;

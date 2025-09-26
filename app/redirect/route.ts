@@ -15,7 +15,10 @@ export async function GET(req: Request) {
     return NextResponse.redirect(new URL("/?error=missing_code", req.url));
   }
 
-  const { CLIENT_ID, CLIENT_SECRET } = process.env;
+  const {
+    CLIENT_ID = "178019",
+    CLIENT_SECRET = "72138331b27efa6dd55a0275ce203d7e4b0fb888",
+  } = process.env;
   if (!CLIENT_ID || !CLIENT_SECRET) {
     return NextResponse.redirect(new URL("/?error=server_misconfig", req.url));
   }
@@ -29,7 +32,10 @@ export async function GET(req: Request) {
 
   const res = await fetch("https://www.strava.com/api/v3/oauth/token", {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Accept: "application/json",
+    },
     body: params,
     cache: "no-store",
   });
@@ -37,7 +43,10 @@ export async function GET(req: Request) {
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
     return NextResponse.redirect(
-      new URL(`/?error=token_exchange_failed&detail=${encodeURIComponent(detail.slice(0,200))}`, req.url)
+      new URL(
+        `/?error=token_exchange_failed&detail=${encodeURIComponent(detail.slice(0, 200))}`,
+        req.url,
+      ),
     );
   }
 
@@ -48,20 +57,20 @@ export async function GET(req: Request) {
   const expires = new Date(token.expires_at * 1000);
   cookieStore.set("strava_access_token", token.access_token, {
     httpOnly: true,
-    secure: true,
+    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
     expires,
   });
-  
+
   cookieStore.set("strava_refresh_token", token.refresh_token, {
     httpOnly: true,
-    secure: true,
+    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
     // (no expiry -> session cookie, or add a long-lived refresh expiry if you prefer)
   });
 
   // Now you *can* send them to the authed area
-  return NextResponse.redirect(new URL("/menu", req.url));
+  return NextResponse.redirect(new URL("/activities", req.url));
 }

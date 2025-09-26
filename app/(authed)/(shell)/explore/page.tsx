@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { boundsFromCenterRadius } from "../../lib/geo";
+import { boundsFromCenterRadius } from "../../../lib/geo";
 import { cookies } from "next/headers";
 import ExploreMap from "./ExploreMap";
 
@@ -10,9 +10,9 @@ export default async function ExplorePage() {
   const lngCookie = cookieStore.get("strava_geo_lng")?.value;
   const radiusCookie = cookieStore.get("strava_geo_radius")?.value;
 
-  if (!latCookie || !lngCookie) redirect("/menu?error=no_geo"); // no geo? fall back
+  if (!latCookie || !lngCookie) redirect("/?error=no_geo"); // no geo? fall back
 
-  if (!token) redirect("/menu?error=missing_token");
+  if (!token) redirect("/?error=missing_token");
 
   const [swLat, swLng, neLat, neLng] = boundsFromCenterRadius(
     Number(latCookie),
@@ -42,7 +42,7 @@ export default async function ExplorePage() {
 
   if (!res.ok) {
     console.error("Explore failed", JSON.stringify(res), token);
-    redirect("/menu?error=explore_failed");
+    redirect("/?error=explore_failed");
   }
 
   const data = await res.json(); // { segments: [...] }
