@@ -7,9 +7,10 @@ async function getStarredSegments(accessToken: string) {
     {
       headers: { Authorization: `Bearer ${accessToken}` },
       cache: "no-store",
-    }
+    },
   );
-  if (!res.ok) throw new Error("Fetching starred segments failed");
+  if (!res.ok)
+    throw new Error("Fetching starred segments failed" + JSON.stringify(res));
   return res.json(); // array of segments
 }
 
@@ -31,9 +32,15 @@ export default async function SegmentsPage() {
         {segments.map((s: DetailedSegment) => (
           <li key={s.id} className="border rounded-lg p-3">
             <div className="font-medium">{s.name}</div>
-            <div className="text-sm opacity-70">Distance: {Math.round(s.distance)} m</div>
-            <div className="text-sm opacity-70">Your PR: {s.athlete_pr_effort.elapsed_time}</div>
-            <div className="text-sm opacity-70">Avg Grade: {s.effort_count}%</div>
+            <div className="text-sm opacity-70">
+              Distance: {Math.round(s.distance)} m
+            </div>
+            <div className="text-sm opacity-70">
+              Your PR: {s.athlete_pr_effort.elapsed_time}
+            </div>
+            <div className="text-sm opacity-70">
+              Avg Grade: {s.effort_count}%
+            </div>
           </li>
         ))}
       </ul>
