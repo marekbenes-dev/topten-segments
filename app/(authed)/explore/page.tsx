@@ -8,6 +8,7 @@ export default async function ExplorePage() {
   const token = cookieStore.get("strava_access_token")?.value;
   const latCookie = cookieStore.get("strava_geo_lat")?.value;
   const lngCookie = cookieStore.get("strava_geo_lng")?.value;
+  const radiusCookie = cookieStore.get("strava_geo_radius")?.value;
 
   if (!latCookie || !lngCookie) redirect("/menu?error=no_geo"); // no geo? fall back
 
@@ -16,7 +17,7 @@ export default async function ExplorePage() {
   const [swLat, swLng, neLat, neLng] = boundsFromCenterRadius(
     Number(latCookie),
     Number(lngCookie),
-    5,
+    radiusCookie ? Number(radiusCookie) : 5,
   );
 
   const fmt = (n: number) => n.toFixed(6);

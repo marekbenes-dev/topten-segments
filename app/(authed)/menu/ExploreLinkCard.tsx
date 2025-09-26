@@ -3,10 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-interface Error {
-  message: string;
-}
-
 export default function ExploreLinkCard() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);

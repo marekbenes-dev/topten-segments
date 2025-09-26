@@ -9,8 +9,9 @@ async function getStarredSegments(accessToken: string) {
       cache: "no-store",
     },
   );
-  if (!res.ok)
+  if (!res.ok) {
     throw new Error("Fetching starred segments failed" + JSON.stringify(res));
+  }
   return res.json(); // array of segments
 }
 
