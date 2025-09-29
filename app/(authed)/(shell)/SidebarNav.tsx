@@ -24,13 +24,7 @@ export default function SidebarNav() {
     <nav className="space-y-2">
       <NavItem href="/activities" label="My Activities" />
       <NavItem href="/segments" label="My Starred Segments" />
-      {/* Use the compact version of your geolocate button */}
-      <div className="rounded border p-3">
-        <div className="mb-2 text-xs uppercase tracking-wide opacity-60">
-          Explore
-        </div>
-        <ExploreLinkCard />
-      </div>
+      <ExploreLinkCard />
     </nav>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 
 export default function ExploreLinkCard() {
   const router = useRouter();
@@ -57,47 +58,40 @@ export default function ExploreLinkCard() {
   };
 
   return (
-    <div className="border rounded p-4 hover:bg-gray-50">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <div className="text-lg font-semibold">
-            {loading ? "Locating…" : "Explore Near Me"}
-          </div>
-          <p className="text-sm opacity-70">
-            {err ? (
-              <span className="text-red-600">{err}</span>
-            ) : (
-              "Find segments around you"
-            )}
-          </p>
-        </div>
+    <div className="block rounded px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer">
+      <p className="text-sm mb-2">
+        {err ? (
+          <span className="text-red-600">{err}</span>
+        ) : (
+          "Find segments around you"
+        )}
+      </p>
 
-        {/* Radius selector */}
-        <label className="text-sm flex items-center gap-2">
-          <span className="opacity-70">Radius</span>
-          <select
-            className="border rounded px-2 py-1 text-sm"
-            value={radiusKm}
-            onChange={(e) => setRadiusKm(Number(e.target.value))}
-            disabled={loading}
-            aria-label="Search radius (km)"
-          >
-            {[1, 2, 3, 5, 10, 20].map((km) => (
-              <option key={km} value={km}>
-                {km} km
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+      {/* Radius selector */}
+      <label className="text-sm flex items-center gap-2">
+        <span className="opacity-70">Pick radius</span>
+        <select
+          className="border rounded px-2 py-1 text-sm"
+          value={radiusKm}
+          onChange={(e) => setRadiusKm(Number(e.target.value))}
+          disabled={loading}
+          aria-label="Search radius (km)"
+        >
+          {[1, 2, 3, 5, 10, 20].map((km) => (
+            <option key={km} value={km}>
+              {km} km
+            </option>
+          ))}
+        </select>
+      </label>
 
-      <button
+      <Button
         onClick={locateAndGo}
-        className="mt-4 w-full rounded bg-black text-white py-2 disabled:opacity-50"
+        className="mt-4 w-full rounded py-2"
         disabled={loading}
       >
-        {loading ? "Getting location…" : `Explore (${radiusKm} km)`}
-      </button>
+        {loading ? "Loading…" : `Explore (${radiusKm} km)`}
+      </Button>
     </div>
   );
 }

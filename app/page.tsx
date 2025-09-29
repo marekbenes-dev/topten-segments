@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
 export default function Home() {
@@ -9,14 +10,9 @@ export default function Home() {
     `&scope=activity:read`;
 
   return (
-    <div>
+    <div className="flex flex-col items-center justify-center min-h-screen py-2">
       <Link href={stravaAuthUrl}>
-        <button
-          className="text-left border rounded p-4 hover:bg-gray-50"
-          style={{ minWidth: 260, maxWidth: 340 }}
-        >
-          <div className="mb-2 text-xl font-bold">Sign in with Strava</div>
-        </button>
+        <Button size="lg">Sign in with Strava</Button>
       </Link>
     </div>
   );

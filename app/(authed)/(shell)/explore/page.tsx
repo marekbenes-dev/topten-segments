@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { boundsFromCenterRadius } from "../../../lib/geo";
+import { boundsFromCenterRadius } from "../../../../lib/geo";
 import { cookies } from "next/headers";
 import ExploreMap from "./ExploreMap";
 

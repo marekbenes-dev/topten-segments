@@ -1,47 +1,49 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import {
+  fmtKm,
+  fmtPaceMinKm,
+  monthWindowsUTC,
+  startOfMonthUTC,
+  startOfNextMonthUTC,
+  startOfNextYearUtcEpoch,
+  startOfYearUtcEpoch,
+  toEpochSeconds,
+} from "./lib";
+import { MONTHS } from "./constants";
+import { fmtDuration } from "@/lib/format";
 
-const MONTHS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
+async function fetchWindowPaged(
+  token: string,
+  afterEpoch: number,
+  beforeEpochExclusive: number,
+  init: RequestInit,
+): Promise<SummaryActivity[]> {
+  const perPage = 200;
+  const out: SummaryActivity[] = [];
+  for (let page = 1; ; page++) {
+    const url = new URL("https://www.strava.com/api/v3/athlete/activities");
+    url.searchParams.set("after", String(afterEpoch));
+    url.searchParams.set("before", String(beforeEpochExclusive - 1)); // exclusive upper bound
+    url.searchParams.set("page", String(page));
+    url.searchParams.set("per_page", String(perPage));
 
-function fmtKm(meters: number) {
-  return (meters / 1000).toFixed(2);
-}
+    const res = await fetch(url, {
+      ...init,
+      headers: { Authorization: `Bearer ${token}`, ...(init.headers || {}) },
+    });
 
-function fmtDuration(sec: number) {
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const s = sec % 60;
-  return [h ? `${h}h` : null, m ? `${m}m` : null, `${s}s`]
-    .filter(Boolean)
-    .join(" ");
-}
+    if (!res.ok) {
+      console.error("Activities fetch failed", res.status, await res.text());
+      redirect("/?error=activities_failed");
+    }
 
-function startOfYearUtcEpoch(year: number) {
-  return Math.floor(Date.UTC(year, 0, 1, 0, 0, 0) / 1000);
-}
-
-function startOfNextYearUtcEpoch(year: number) {
-  return Math.floor(Date.UTC(year + 1, 0, 1, 0, 0, 0) / 1000);
-}
-
-function fmtPaceMinKm(pace: number) {
-  const min = Math.floor(pace);
-  const sec = Math.round((pace - min) * 60);
-  return `${min}:${sec.toString().padStart(2, "0")} min/km`;
+    const batch = (await res.json()) as SummaryActivity[];
+    out.push(...batch);
+    if (batch.length < perPage) break;
+  }
+  return out;
 }
 
 async function fetchAllActivities(
@@ -49,31 +51,37 @@ async function fetchAllActivities(
   afterEpoch: number,
   beforeEpoch: number,
 ): Promise<SummaryActivity[]> {
-  const perPage = 200; // Strava allows up to 200 for this endpoint
-  let page = 1;
-  const all: SummaryActivity[] = [];
-  // keep page-fetching until fewer than perPage returned
-  for (;;) {
-    const url = new URL("https://www.strava.com/api/v3/athlete/activities");
-    url.searchParams.set("after", String(afterEpoch));
-    url.searchParams.set("before", String(beforeEpoch));
-    url.searchParams.set("page", String(page));
-    url.searchParams.set("per_page", String(perPage));
+  const now = new Date();
+  const currentMonthStart = toEpochSeconds(startOfMonthUTC(now));
+  const nextMonthStart = toEpochSeconds(startOfNextMonthUTC(now));
+  const beforeExclusive = beforeEpoch;
 
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: "no-store",
-    });
-    if (!res.ok) {
-      console.error("Activities fetch failed", res.status, await res.text());
-      // If token expired etc., bounce out to login/landing
-      redirect("/?error=activities_failed");
+  const all: SummaryActivity[] = [];
+
+  for (const [winAfter, winBeforeExcl] of monthWindowsUTC(
+    afterEpoch,
+    beforeExclusive,
+  )) {
+    const windowOverlapsCurrentMonth =
+      winAfter < nextMonthStart && winBeforeExcl > currentMonthStart;
+
+    if (windowOverlapsCurrentMonth) {
+      // This window is (at least partly) the current month -> always fresh
+      const fresh = await fetchWindowPaged(token, winAfter, winBeforeExcl, {
+        cache: "no-store",
+      });
+      all.push(...fresh);
+    } else {
+      // Older month -> cache on the server for 1 month (tagged by yyyy-mm for optional manual revalidate)
+      const d = new Date(winAfter * 1000);
+      const tag = `strava-${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+      const cached = await fetchWindowPaged(token, winAfter, winBeforeExcl, {
+        next: { revalidate: 2628000, tags: [tag] },
+      });
+      all.push(...cached);
     }
-    const batch = (await res.json()) as SummaryActivity[];
-    all.push(...batch);
-    if (batch.length < perPage) break;
-    page += 1;
   }
+
   return all;
 }
 
@@ -94,12 +102,11 @@ export default async function ActivitiesPage({
     : nowYear;
 
   // guard ridiculous years
-  const year = Math.min(Math.max(requestedYear, 2009), nowYear + 1);
-
-  // Bound by full UTC years to keep server results small
+  const year = Math.min(Math.max(requestedYear, 2009), nowYear);
   const after = startOfYearUtcEpoch(year);
-  const before = startOfNextYearUtcEpoch(year);
-
+  // check if year is current year to prevent going into the future
+  const before =
+    nowYear === year ? toEpochSeconds(now) : startOfNextYearUtcEpoch(year);
   const activities = await fetchAllActivities(token, after, before);
 
   // Initialize 12 months
@@ -147,22 +154,26 @@ export default async function ActivitiesPage({
         ? Math.round(rideWatts.reduce((s, n) => s + n, 0) / rideWatts.length)
         : null;
 
-    const runPaces: number[] = m.items
-      .filter(
-        (a) =>
+    const runPaceBuilderData = m.items.reduce(
+      (acc, a) => {
+        if (
           (a.type || a.sport_type) === "Run" ||
-          (a.type || a.sport_type) === "VirtualRun",
-      )
-      .map((a) =>
-        a.moving_time > 0 && a.distance > 0
-          ? (a.moving_time * 1000) / (a.distance * 60) // min/km
-          : null,
-      )
-      .filter((n): n is number => typeof n === "number");
-    m.avgPaceRuns =
-      runPaces.length > 0
-        ? (runPaces.reduce((s, n) => s + n, 0) / runPaces.length).toFixed(2)
-        : null;
+          (a.type || a.sport_type) === "VirtualRun"
+        ) {
+          if (a.moving_time > 0 && a.distance > 0) {
+            acc.totalTime += a.moving_time;
+            acc.totalDistance += a.distance;
+          }
+        }
+        return acc;
+      },
+      { totalTime: 0, totalDistance: 0 },
+    );
+
+    m.avgPaceRuns = String(
+      (runPaceBuilderData.totalTime * 1000) /
+        (runPaceBuilderData.totalDistance * 60),
+    );
   }
 
   // Decide how many tiles to show
@@ -176,6 +187,7 @@ export default async function ActivitiesPage({
     <div>
       <div className="mb-4 flex items-center gap-3">
         <Link
+          prefetch={false}
           href={`/activities?year=${prevYear}`}
           className="border rounded px-3 py-2 hover:bg-gray-50"
           aria-disabled={prevYear < 2010}
@@ -214,15 +226,15 @@ export default async function ActivitiesPage({
 
                 <div className="mt-2 text-sm">
                   <div>
-                    <span className="opacity-70">Total distance: </span>
-                    <span className="font-medium">
-                      {fmtKm(m.totals.distance)} km
-                    </span>
-                  </div>
-                  <div>
                     <span className="opacity-70">Total moving time: </span>
                     <span className="font-medium">
                       {fmtDuration(m.totals.moving)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="opacity-70">Total distance: </span>
+                    <span className="font-medium">
+                      {fmtKm(m.totals.distance)} km
                     </span>
                   </div>
                 </div>
@@ -232,14 +244,14 @@ export default async function ActivitiesPage({
                   {has ? (
                     <ul className="mt-1 space-y-1 text-sm">
                       {Object.entries(m.byType)
-                        .sort((a, b) => b[1].distance - a[1].distance)
+                        .sort((a, b) => b[1].moving - a[1].moving)
                         .map(([type, t]) => (
                           <li key={type} className="flex justify-between">
                             <span className="opacity-80">
                               {type} ({t.count})
                             </span>
                             <span className="opacity-80">
-                              {fmtKm(t.distance)} km · {fmtDuration(t.moving)}
+                              {fmtKm(t.distance)} · {fmtDuration(t.moving)}
                             </span>
                           </li>
                         ))}

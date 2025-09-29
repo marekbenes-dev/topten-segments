@@ -1,3 +1,4 @@
+import { fmtDuration } from "@/lib/format";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -9,21 +10,24 @@ async function getStarredSegments(accessToken: string) {
       cache: "no-store",
     },
   );
+  console.log(res, accessToken);
   if (!res.ok) {
     throw new Error("Fetching starred segments failed" + JSON.stringify(res));
   }
+
   return res.json(); // array of segments
 }
 
 export default async function SegmentsPage() {
   const cookieStore = await cookies();
-  const token = String(cookieStore.get("strava_access_token"));
+  const token = String(cookieStore.get("strava_access_token")?.value);
 
   if (!token) {
     redirect("/?error=missing_token");
   }
 
   const segments = await getStarredSegments(token);
+  console.log(segments);
 
   // 5) Render (or do `redirect('/dashboard')` after saving to DB)
   return (
@@ -32,15 +36,17 @@ export default async function SegmentsPage() {
       <ul className="mt-4 space-y-3">
         {segments.map((s: DetailedSegment) => (
           <li key={s.id} className="border rounded-lg p-3">
-            <div className="font-medium">{s.name}</div>
+            <div className="font-medium">
+              {s.name} / {s.activity_type}
+            </div>
             <div className="text-sm opacity-70">
               Distance: {Math.round(s.distance)} m
             </div>
             <div className="text-sm opacity-70">
-              Your PR: {s.athlete_pr_effort?.elapsed_time / 60} mins
+              Your PR: {fmtDuration(s.athlete_pr_effort?.elapsed_time)} mins
             </div>
             <div className="text-sm opacity-70">
-              Avg Grade: {s.effort_count}%
+              Avg Grade: {s.average_grade}%
             </div>
           </li>
         ))}
