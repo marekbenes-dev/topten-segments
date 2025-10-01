@@ -7,7 +7,7 @@ export default function Home() {
     `?client_id=${process.env.CLIENT_ID ?? "178019"}` +
     `&redirect_uri=${process.env.REDIRECT_URI ?? "http://localhost:3000/redirect"}` +
     `&response_type=code` +
-    `&scope=activity:read`;
+    `&scope=activity:read,activity:write`;
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen py-2">

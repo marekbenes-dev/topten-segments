@@ -24,6 +24,7 @@ export default function SidebarNav() {
     <nav className="space-y-2">
       <NavItem href="/activities" label="My Activities" />
       <NavItem href="/segments" label="My Starred Segments" />
+      <NavItem href="/refactor-activities" label="Refactor Activities" />
       <ExploreLinkCard />
     </nav>
   );

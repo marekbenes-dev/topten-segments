@@ -27,9 +27,7 @@ export default async function SegmentsPage() {
   }
 
   const segments = await getStarredSegments(token);
-  console.log(segments);
 
-  // 5) Render (or do `redirect('/dashboard')` after saving to DB)
   return (
     <div className="container mx-auto p-6">
       <h1 className="text-xl font-bold">Your starred segments</h1>
