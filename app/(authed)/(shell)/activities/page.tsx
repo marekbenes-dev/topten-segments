@@ -146,7 +146,11 @@ export default async function ActivitiesPage({
   // Compute avg ride watts (simple mean over rides that have a watts value)
   for (const m of months) {
     const rideWatts: number[] = m.items
-      .filter((a) => (a.type || a.sport_type) === "Ride")
+      .filter(
+        (a) =>
+          (a.type || a.sport_type) === "Ride" ||
+          (a.type || a.sport_type) === "VirtualRide",
+      )
       .map((a) => a.weighted_average_watts ?? a.average_watts ?? null)
       .filter((n): n is number => typeof n === "number");
     m.avgRideWatts =
@@ -170,10 +174,12 @@ export default async function ActivitiesPage({
       { totalTime: 0, totalDistance: 0 },
     );
 
-    m.avgPaceRuns = String(
-      (runPaceBuilderData.totalTime * 1000) /
-        (runPaceBuilderData.totalDistance * 60),
-    );
+    const { totalDistance, totalTime } = runPaceBuilderData;
+
+    m.avgPaceRuns =
+      totalDistance && totalTime
+        ? String((totalTime * 1000) / (totalDistance * 60))
+        : null;
   }
 
   // Decide how many tiles to show
@@ -291,7 +297,7 @@ export default async function ActivitiesPage({
                         </a>
                       </div>
                     ) : (
-                      <div className="opacity-60 mt-1">—</div>
+                      <div className="opacity-60 mt-1">No runs this month.</div>
                     )}
                   </div>
 
@@ -319,7 +325,9 @@ export default async function ActivitiesPage({
                         </a>
                       </div>
                     ) : (
-                      <div className="opacity-60 mt-1">—</div>
+                      <div className="opacity-60 mt-1">
+                        No rides this month.
+                      </div>
                     )}
                   </div>
                 </div>
@@ -334,7 +342,7 @@ export default async function ActivitiesPage({
                   <span className="font-medium">
                     {m.avgPaceRuns != null
                       ? fmtPaceMinKm(Number(m.avgPaceRuns))
-                      : "—"}
+                      : "No runs this month."}
                   </span>
                 </div>
               </div>

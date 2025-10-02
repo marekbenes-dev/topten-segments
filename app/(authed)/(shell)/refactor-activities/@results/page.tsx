@@ -7,6 +7,10 @@ import { cookies } from "next/headers";
 
 export const dynamic = "force-dynamic"; // always re-run on param change
 
+interface ResultsSearchParams {
+  [k: string]: string | string[] | undefined;
+}
+
 async function stravaGet(url: string, token: string) {
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
@@ -47,7 +51,7 @@ function formatDate(iso?: string) {
 export default async function ResultsPage({
   searchParams,
 }: {
-  searchParams: { [k: string]: string | string[] | undefined };
+  searchParams: Promise<ResultsSearchParams>;
 }) {
   const sp = await searchParams;
   const q = (sp.q as string | undefined)?.trim();
