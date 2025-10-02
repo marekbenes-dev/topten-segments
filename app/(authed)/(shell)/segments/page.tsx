@@ -10,7 +10,7 @@ async function getStarredSegments(accessToken: string) {
       cache: "no-store",
     },
   );
-  console.log(res, accessToken);
+
   if (!res.ok) {
     throw new Error("Fetching starred segments failed" + JSON.stringify(res));
   }
@@ -27,6 +27,8 @@ export default async function SegmentsPage() {
   }
 
   const segments = await getStarredSegments(token);
+
+  console.log("Fetched segments:", segments);
 
   return (
     <div className="container mx-auto p-6">

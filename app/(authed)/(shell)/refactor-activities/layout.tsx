@@ -15,8 +15,7 @@ export default function RefactorActivitiesLayout({
     <div className="container mx-auto p-6 max-w-6xl">
       <h1 className="text-2xl font-bold">Batch Activity Refactor</h1>
       <p className="text-gray-600 mt-1">
-        Enter an activity name substring and a new type. Results render
-        server-side.
+        Enter an activity name and a new type. Results render server-side.
       </p>
 
       <div className="mt-6 grid gap-6">

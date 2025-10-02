@@ -146,42 +146,42 @@ export default async function ActivitiesPage({
     }
   }
 
-  // Compute avg ride watts (simple mean over rides that have a watts value)
-  for (const m of months) {
-    const rideWatts: number[] = m.items
-      .filter(
-        (a) =>
-          (a.type || a.sport_type) === "Ride" ||
-          (a.type || a.sport_type) === "VirtualRide",
-      )
-      .map((a) => a.weighted_average_watts ?? a.average_watts ?? null)
-      .filter((n): n is number => typeof n === "number");
-    m.avgRideWatts =
-      rideWatts.length > 0
-        ? Math.round(rideWatts.reduce((s, n) => s + n, 0) / rideWatts.length)
-        : null;
+  const isRide = (t?: string) => t === "Ride" || t === "VirtualRide";
+  const isRun = (t?: string) => t === "Run" || t === "VirtualRun";
 
-    const runPaceBuilderData = m.items.reduce(
+  for (const m of months) {
+    const agg = m.items.reduce(
       (acc, a) => {
-        if (
-          (a.type || a.sport_type) === "Run" ||
-          (a.type || a.sport_type) === "VirtualRun"
-        ) {
-          if (a.moving_time > 0 && a.distance > 0) {
-            acc.totalTime += a.moving_time;
-            acc.totalDistance += a.distance;
-          }
+        const mt = a.moving_time ?? 0;
+        const dist = a.distance ?? 0;
+        if (mt <= 0 || dist <= 0) return acc;
+
+        if (isRide(a.type)) {
+          acc.totalRideTime += mt;
+          acc.totalWatts +=
+            mt * (a.weighted_average_watts ?? a.average_watts ?? 0);
         }
+
+        if (isRun(a.type)) {
+          acc.totalRunTime += mt;
+          acc.totalDistance += dist;
+        }
+
         return acc;
       },
-      { totalTime: 0, totalDistance: 0 },
+      { totalRideTime: 0, totalWatts: 0, totalRunTime: 0, totalDistance: 0 },
     );
 
-    const { totalDistance, totalTime } = runPaceBuilderData;
+    const { totalRideTime, totalWatts, totalRunTime, totalDistance } = agg;
+
+    m.avgRideWatts =
+      totalWatts && totalRideTime
+        ? Math.round(totalWatts / totalRideTime)
+        : null;
 
     m.avgPaceRuns =
-      totalDistance && totalTime
-        ? String((totalTime * 1000) / (totalDistance * 60))
+      totalDistance && totalRunTime
+        ? String((totalRunTime * 1000) / (totalDistance * 60)) // minutes/km (decimal)
         : null;
   }
 
@@ -234,16 +234,16 @@ export default async function ActivitiesPage({
                 </div>
 
                 <div className="mt-2 text-sm">
-                  <div>
+                  <div className="flex items-baseline justify-between">
                     <span className="opacity-70">Total moving time: </span>
                     <span className="font-medium">
                       {fmtDuration(m.totals.moving)}
                     </span>
                   </div>
-                  <div>
+                  <div className="flex items-baseline justify-between">
                     <span className="opacity-70">Total distance: </span>
                     <span className="font-medium">
-                      {fmtKm(m.totals.distance)} km
+                      {fmtKm(m.totals.distance)}
                     </span>
                   </div>
                 </div>
@@ -256,7 +256,7 @@ export default async function ActivitiesPage({
                         .sort((a, b) => b[1].moving - a[1].moving)
                         .map(([type, t]) => (
                           <li key={type} className="flex justify-between">
-                            <span className="opacity-80 inline-flex items-center gap-2">
+                            <span className="w-50 opacity-80 inline-flex items-center gap-2">
                               <span aria-hidden="true">
                                 {iconForType(type)}
                               </span>
@@ -264,11 +264,9 @@ export default async function ActivitiesPage({
                                 {prettyTypeLabel(type)} ({t.count})
                               </span>
                             </span>
-                            <div className="flex items-baseline justify-between gap-1">
-                              <span className="opacity-80">
-                                {fmtKm(t.distance)}
-                              </span>
-                              ·<span>{fmtDuration(t.moving, true)}</span>
+                            <div className="w-50 flex justify-between tabular-nums">
+                              <span>{t.distance > 0 && fmtKm(t.distance)}</span>
+                              <span>{fmtDuration(t.moving, true)}</span>
                             </div>
                           </li>
                         ))}
