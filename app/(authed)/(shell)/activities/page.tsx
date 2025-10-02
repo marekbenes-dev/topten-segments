@@ -4,7 +4,9 @@ import Link from "next/link";
 import {
   fmtKm,
   fmtPaceMinKm,
+  iconForType,
   monthWindowsUTC,
+  prettyTypeLabel,
   startOfMonthUTC,
   startOfNextMonthUTC,
   startOfNextYearUtcEpoch,
@@ -128,6 +130,7 @@ export default async function ActivitiesPage({
     m.totals.count += 1;
 
     const t = a.type || a.sport_type || "Other";
+
     if (!m.byType[t]) m.byType[t] = { distance: 0, moving: 0, count: 0 };
     m.byType[t].distance += a.distance;
     m.byType[t].moving += a.moving_time;
@@ -253,12 +256,20 @@ export default async function ActivitiesPage({
                         .sort((a, b) => b[1].moving - a[1].moving)
                         .map(([type, t]) => (
                           <li key={type} className="flex justify-between">
-                            <span className="opacity-80">
-                              {type} ({t.count})
+                            <span className="opacity-80 inline-flex items-center gap-2">
+                              <span aria-hidden="true">
+                                {iconForType(type)}
+                              </span>
+                              <span>
+                                {prettyTypeLabel(type)} ({t.count})
+                              </span>
                             </span>
-                            <span className="opacity-80">
-                              {fmtKm(t.distance)} · {fmtDuration(t.moving)}
-                            </span>
+                            <div className="flex items-baseline justify-between gap-1">
+                              <span className="opacity-80">
+                                {fmtKm(t.distance)}
+                              </span>
+                              ·<span>{fmtDuration(t.moving, true)}</span>
+                            </div>
                           </li>
                         ))}
                     </ul>
@@ -274,7 +285,19 @@ export default async function ActivitiesPage({
                 {/* 👈 pushes this block to the bottom */}
                 <div className="grid grid-cols-1 gap-3 text-sm">
                   <div className="border rounded p-2">
-                    <div className="opacity-70">Longest run</div>
+                    <div className="flex justify-between items-baseline">
+                      <div className="opacity-70">Longest run</div>
+                      {m.longestRun && (
+                        <a
+                          href={`https://www.strava.com/activities/${m.longestRun?.id}`}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          className="underline opacity-80"
+                        >
+                          Open
+                        </a>
+                      )}
+                    </div>
                     {m.longestRun ? (
                       <div className="mt-1">
                         <div
@@ -287,14 +310,6 @@ export default async function ActivitiesPage({
                           {fmtKm(m.longestRun.distance)} km ·{" "}
                           {fmtDuration(m.longestRun.moving_time)}
                         </div>
-                        <a
-                          href={`https://www.strava.com/activities/${m.longestRun.id}`}
-                          target="_blank"
-                          rel="noreferrer noopener"
-                          className="underline opacity-80"
-                        >
-                          Open
-                        </a>
                       </div>
                     ) : (
                       <div className="opacity-60 mt-1">No runs this month.</div>
@@ -302,7 +317,19 @@ export default async function ActivitiesPage({
                   </div>
 
                   <div className="border rounded p-2">
-                    <div className="opacity-70">Longest ride</div>
+                    <div className="flex justify-between items-baseline">
+                      <div className="opacity-70">Longest ride</div>
+                      {m.longestRide && (
+                        <a
+                          href={`https://www.strava.com/activities/${m.longestRide?.id}`}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          className="underline opacity-80"
+                        >
+                          Open
+                        </a>
+                      )}
+                    </div>
                     {m.longestRide ? (
                       <div className="mt-1">
                         <div
@@ -315,14 +342,6 @@ export default async function ActivitiesPage({
                           {fmtKm(m.longestRide.distance)} km ·{" "}
                           {fmtDuration(m.longestRide.moving_time)}
                         </div>
-                        <a
-                          href={`https://www.strava.com/activities/${m.longestRide.id}`}
-                          target="_blank"
-                          rel="noreferrer noopener"
-                          className="underline opacity-80"
-                        >
-                          Open
-                        </a>
                       </div>
                     ) : (
                       <div className="opacity-60 mt-1">
@@ -331,19 +350,25 @@ export default async function ActivitiesPage({
                     )}
                   </div>
                 </div>
-                <div className="text-sm">
-                  <span className="opacity-70">Avg watts (rides): </span>
-                  <span className="font-medium">
-                    {m.avgRideWatts != null ? `${m.avgRideWatts} W` : "—"}
-                  </span>
-                </div>
-                <div className="text-sm">
-                  <span className="opacity-70">Avg pace (runs): </span>
-                  <span className="font-medium">
-                    {m.avgPaceRuns != null
-                      ? fmtPaceMinKm(Number(m.avgPaceRuns))
-                      : "No runs this month."}
-                  </span>
+                <div className="flex items-baseline justify-between mt-2 pt-2 border-t">
+                  <div className="text-sm">
+                    <span className="opacity-70" title="Weighted average watts">
+                      Watts:{" "}
+                    </span>
+                    <span className="font-medium">
+                      {m.avgRideWatts != null ? `${m.avgRideWatts} W` : "—"}
+                    </span>
+                  </div>
+                  <div className="text-sm">
+                    <span className="opacity-70" title="Average pace">
+                      Pace:{" "}
+                    </span>
+                    <span className="font-medium">
+                      {m.avgPaceRuns != null
+                        ? fmtPaceMinKm(Number(m.avgPaceRuns))
+                        : "No runs this month."}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

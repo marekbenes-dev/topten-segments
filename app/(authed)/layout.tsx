@@ -16,9 +16,13 @@ export default async function AuthedLayout({
     <div className="min-h-screen">
       <nav className="border-b">
         <div className="container mx-auto p-4 flex gap-4">
-          <form action="/api/auth/signout" method="post" className="ml-auto">
+          <form
+            action="/api/auth/deauthorize"
+            method="post"
+            className="ml-auto"
+          >
             <Button variant="link" size="sm">
-              Sign out
+              Disconnect from Strava
             </Button>
           </form>
         </div>
