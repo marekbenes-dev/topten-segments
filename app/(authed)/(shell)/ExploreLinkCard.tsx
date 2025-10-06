@@ -63,19 +63,19 @@ export default function ExploreLinkCard() {
         {err ? (
           <span className="text-red-600">{err}</span>
         ) : (
-          "Find segments around you"
+          "Segments around you"
         )}
       </p>
 
       {/* Radius selector */}
       <label className="text-sm flex items-center gap-2">
-        <span className="opacity-70">Pick radius</span>
+        <span className="opacity-70">Radius</span>
         <select
           className="border rounded px-2 py-1 text-sm"
           value={radiusKm}
           onChange={(e) => setRadiusKm(Number(e.target.value))}
           disabled={loading}
-          aria-label="Search radius (km)"
+          aria-label="Pick radius (km)"
         >
           {[1, 2, 3, 5, 10, 20].map((km) => (
             <option key={km} value={km}>

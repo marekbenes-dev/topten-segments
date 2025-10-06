@@ -22,6 +22,7 @@
     "*.{json,md,css,scss}": "prettier --write"
   },
   "dependencies": {
+    "@mapbox/polyline": "^1.2.1",
     "@radix-ui/react-slot": "^1.2.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -43,6 +44,7 @@
     "@tailwindcss/postcss": "^4",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/leaflet": "^1.9.20",
+    "@types/mapbox__polyline": "^1",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

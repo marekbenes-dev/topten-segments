@@ -1,38 +1,29 @@
-// ------------------------------------------------------------
-// File: app/refactor-activities/@results/page.tsx
-// Server component. Reads searchParams (q, target, dry), fetches activities, and
-// updates them if dry === "0". Renders a two-column table: Previous vs New.
+// app/refactor-activities/@results/page.tsx
+"use client";
 
-import { cookies } from "next/headers";
+import React from "react";
+import { useSearchParams } from "next/navigation";
 
-export const dynamic = "force-dynamic"; // always re-run on param change
+const COMMON_TYPES = [
+  "Run",
+  "Ride",
+  "Walk",
+  "Workout",
+  "Hike",
+  "Swim",
+  "VirtualRide",
+  "Rowing",
+  "WeightTraining",
+  "Yoga",
+];
 
-interface ResultsSearchParams {
-  [k: string]: string | string[] | undefined;
-}
-
-async function stravaGet(url: string, token: string) {
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: "no-store",
-  });
-  if (!res.ok)
-    throw new Error(`GET ${url} failed: ${res.status} ${await res.text()}`);
-  return res.json();
-}
-
-async function stravaPut(url: string, token: string, body: { type: string }) {
-  const res = await fetch(url, {
-    method: "PUT",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) return { ok: false, status: res.status, text: await res.text() };
-  return { ok: true };
-}
+type Match = {
+  id: number;
+  name: string;
+  start_date: string;
+  sport_type: string;
+  prev_type: string;
+};
 
 function formatDate(iso?: string) {
   if (!iso) return "—";
@@ -44,123 +35,263 @@ function formatDate(iso?: string) {
       day: "2-digit",
     });
   } catch {
-    return iso;
+    return iso!;
   }
 }
 
-export default async function ResultsPage({
-  searchParams,
-}: {
-  searchParams: Promise<ResultsSearchParams>;
-}) {
-  const sp = await searchParams;
-  const q = (sp.q as string | undefined)?.trim();
-  const target = (sp.target as string | undefined)?.trim();
-  const dry = (sp.dry as string | undefined) !== "0"; // default true
+type RowEditorProps = {
+  a: Match;
+  idx: number;
+  onUpdate: (id: number, name?: string, type?: string) => Promise<void>;
+};
 
-  console.log({ q, target, dry, sp });
+function RowEditor({ a, idx, onUpdate }: RowEditorProps) {
+  const [newName, setNewName] = React.useState("");
+  const [newType, setNewType] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
 
-  if (!q || !target) {
+  async function handleUpdate() {
+    if (!newName && !newType) return;
+    setSaving(true);
+    try {
+      await onUpdate(a.id, newName || undefined, newType || undefined);
+      setNewName("");
+      setNewType("");
+    } catch (e) {
+      alert(String(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <tr>
+      <td className="px-4 py-2 align-top">{idx + 1}</td>
+      <td className="px-4 py-2 align-top">{a.name}</td>
+      <td className="px-4 py-2 align-top">{formatDate(a.start_date)}</td>
+      <td className="px-4 py-2 align-top">
+        <div className="font-mono">{a.sport_type}</div>
+      </td>
+      <td className="px-4 py-2 align-top" colSpan={3}>
+        <div className="flex gap-2 items-center">
+          <input
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder={`leave blank (keep "${a.name}")`}
+            className="w-[260px] rounded-xl border px-3 py-2"
+          />
+          <select
+            value={newType}
+            onChange={(e) => setNewType(e.target.value)}
+            className="w-[180px] rounded-xl border px-3 py-2 h-[38px]"
+          >
+            <option value="">(no change)</option>
+            {COMMON_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={handleUpdate}
+            disabled={saving}
+            className="rounded-2xl border px-3 py-2 text-xs"
+            title="Apply to this activity"
+          >
+            {saving ? "Saving…" : "Update"}
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+export default function ResultsPage() {
+  const sp = useSearchParams();
+  const q = (sp.get("q") || "").trim();
+  const from = sp.get("from") || "";
+  const to = sp.get("to") || "";
+  const hasSearch = Boolean(q || from || to);
+
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [matches, setMatches] = React.useState<Match[]>([]);
+
+  // Bulk edit state
+  const [bulkName, setBulkName] = React.useState("");
+  const [bulkType, setBulkType] = React.useState("");
+
+  // Fetch matches when params change
+  React.useEffect(() => {
+    if (!hasSearch) {
+      setMatches([]);
+      setError(null);
+      return;
+    }
+    const controller = new AbortController();
+    const qs = new URLSearchParams();
+    if (q) qs.set("q", q);
+    if (from) qs.set("from", from);
+    if (to) qs.set("to", to);
+
+    setLoading(true);
+    setError(null);
+
+    fetch(`/api/refactor-activities/search?${qs.toString()}`, {
+      signal: controller.signal,
+      cache: "no-store",
+    })
+      .then(async (r) => {
+        if (!r.ok) throw new Error(await r.text());
+        return r.json();
+      })
+      .then((json) => setMatches(json.matches || []))
+      .catch((e) => {
+        if (e.name !== "AbortError") setError(String(e));
+      })
+      .finally(() => setLoading(false));
+
+    return () => controller.abort();
+  }, [q, from, to, hasSearch]);
+
+  async function updateOne(id: number, name?: string, type?: string) {
+    if (!name && !type) return;
+    const res = await fetch("/api/refactor-activities/update", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, name, type }),
+    });
+    const data = await res.json();
+    if (!res.ok || data?.ok === false) {
+      throw new Error(data?.error || `Failed to update ${id}`);
+    }
+    // optimistic local update
+    setMatches((prev) =>
+      prev.map((m) =>
+        m.id === id
+          ? { ...m, name: name || m.name, sport_type: type || m.sport_type }
+          : m,
+      ),
+    );
+  }
+
+  async function updateAll() {
+    if (!bulkName && !bulkType) return;
+    const ids = matches.map((m) => m.id);
+    const res = await fetch("/api/refactor-activities/bulk-update", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ids,
+        name: bulkName || undefined,
+        type: bulkType || undefined,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok || data?.ok === false) {
+      throw new Error(data?.error || "Bulk update failed");
+    }
+    // optimistic local update
+    setMatches((prev) =>
+      prev.map((m) => ({
+        ...m,
+        name: bulkName || m.name,
+        sport_type: bulkType || m.sport_type,
+      })),
+    );
+    setBulkName("");
+    setBulkType("");
+  }
+
+  if (!hasSearch) {
     return (
-      <div className="rounded-2xl border p-6 text-amber-700">
-        Provide both an activity name and a new type, then press Run.
+      <div className="rounded-2xl border p-6 text-gray-700">
+        Use the form above to search by name and/or date. Results will appear
+        here.
       </div>
     );
   }
 
-  const token =
-    (await cookies()).get("strava_access_token")?.value ||
-    process.env.STRAVA_TOKEN;
-  console.log(token);
-  if (!token) {
+  if (loading) {
+    return <div className="rounded-2xl border p-6 text-gray-600">Loading…</div>;
+  }
+
+  if (error) {
     return (
       <div className="rounded-2xl border p-6 text-red-700">
-        Missing Strava token. Set an <code>HttpOnly</code> cookie named{" "}
-        <code>strava_access_token</code> or define <code>STRAVA_TOKEN</code> in
-        your environment.
+        Error loading activities:{" "}
+        <span className="break-all">{String(error)}</span>
       </div>
     );
-  }
-
-  // 1) Fetch all activities (paged)
-  const perPage = 200;
-  let page = 1;
-  const all: SummaryActivity[] = [];
-
-  while (true) {
-    const url = `https://www.strava.com/api/v3/athlete/activities?per_page=${perPage}&page=${page}`;
-    const batch = await stravaGet(url, token);
-    if (!Array.isArray(batch) || batch.length === 0) break;
-    all.push(...batch);
-    if (batch.length < perPage) break;
-    page += 1;
-    // polite delay
-    await new Promise((r) => setTimeout(r, 150));
-  }
-
-  // 2) Filter by name substring (case-insensitive)
-  const qlc = q.toLowerCase();
-  const matches = all.filter(
-    (a) =>
-      a?.name?.toLowerCase().includes(qlc) &&
-      (a.sport_type || a.type) !== target,
-  );
-
-  // 3) Prepare updates (previous/new state)
-  type Row = {
-    id: number;
-    name: string;
-    date: string;
-    prevType: string;
-    newType: string;
-    status: "updated" | "skipped" | "failed";
-    error?: string;
-  };
-
-  const rows: Row[] = [];
-
-  console.log({ matches });
-
-  for (const a of matches) {
-    const prevType = a.sport_type || a.type || "";
-    const row: Row = {
-      id: a.id,
-      name: a.name,
-      date: a.start_date,
-      prevType,
-      newType: target,
-      status: dry ? "skipped" : "updated",
-    };
-
-    if (!dry) {
-      const putUrl = `https://www.strava.com/api/v3/activities/${a.id}`;
-      console.log("PUT", putUrl, { type: target });
-      const res = await stravaPut(putUrl, token, { type: target });
-      if (!res.ok) {
-        row.status = "failed";
-        row.error = `${res.status} ${res.text}`;
-      }
-      await new Promise((r) => setTimeout(r, 200));
-    }
-
-    rows.push(row);
   }
 
   return (
     <div className="rounded-2xl border">
       <div className="p-4 border-b flex items-center justify-between">
         <div>
-          <h2 className="font-semibold">
-            {dry ? "Preview (Dry run)" : "Updated activities"}
-          </h2>
+          <h2 className="font-semibold">Matched activities</h2>
           <p className="text-sm text-gray-600">
-            Query: <span className="font-mono">{q}</span> • Target type:{" "}
-            <span className="font-mono">{target}</span> • Matches: {rows.length}
+            Filter:{" "}
+            {q ? (
+              <>
+                name contains <span className="font-mono">{q}</span>
+              </>
+            ) : (
+              "—"
+            )}{" "}
+            • Date:{" "}
+            {from || to ? (
+              <span className="font-mono">
+                {from || "…"} → {to || "…"}{" "}
+              </span>
+            ) : (
+              "—"
+            )}{" "}
+            • Matches: {matches.length}
           </p>
         </div>
       </div>
 
-      {rows.length === 0 ? (
+      {/* Bulk editor */}
+      <div className="p-4 border-b">
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex-col">
+            <label className="block text-sm font-medium">New name (all)</label>
+            <input
+              value={bulkName}
+              onChange={(e) => setBulkName(e.target.value)}
+              placeholder="leave blank to keep"
+              className="mt-1 w-[280px] rounded-xl border px-3 py-2"
+            />
+          </div>
+          <div className="flex-col">
+            <label className="block text-sm font-medium">New type (all)</label>
+            <select
+              value={bulkType}
+              onChange={(e) => setBulkType(e.target.value)}
+              className="mt-1 w-[220px] rounded-xl border px-3 py-2 h-[42px]"
+            >
+              <option value="">(no change)</option>
+              {COMMON_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            type="button"
+            onClick={() => updateAll().catch((e) => alert(String(e)))}
+            className="h-[42px] rounded-2xl border px-4 text-sm"
+            disabled={matches.length === 0}
+          >
+            Change all
+          </button>
+        </div>
+      </div>
+
+      {matches.length === 0 ? (
         <div className="p-6 text-gray-600">No activities matched.</div>
       ) : (
         <div className="overflow-x-auto">
@@ -170,42 +301,15 @@ export default async function ResultsPage({
                 <th className="px-4 py-2 w-8">#</th>
                 <th className="px-4 py-2">Name</th>
                 <th className="px-4 py-2">Date</th>
-                <th className="px-4 py-2">Previous</th>
-                <th className="px-4 py-2">New</th>
-                <th className="px-4 py-2">Status</th>
+                <th className="px-4 py-2">Current type</th>
+                <th className="px-4 py-2" colSpan={3}>
+                  Edit & Apply
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y">
-              {rows.map((r, idx) => (
-                <tr key={r.id}>
-                  <td className="px-4 py-2 align-top">{idx + 1}</td>
-                  <td className="px-4 py-2 align-top">{r.name}</td>
-                  <td className="px-4 py-2 align-top">{formatDate(r.date)}</td>
-                  <td className="px-4 py-2 align-top">
-                    <div className="font-mono">{r.prevType}</div>
-                  </td>
-                  <td className="px-4 py-2 align-top">
-                    <div className="font-mono">{r.newType}</div>
-                  </td>
-                  <td className="px-4 py-2 align-top">
-                    <span
-                      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs ${
-                        r.status === "updated"
-                          ? "border-green-500"
-                          : r.status === "failed"
-                            ? "border-red-500"
-                            : "border-gray-400"
-                      }`}
-                    >
-                      {r.status}
-                    </span>
-                    {r.error && (
-                      <div className="text-xs text-red-600 mt-1 break-all">
-                        {r.error}
-                      </div>
-                    )}
-                  </td>
-                </tr>
+              {matches.map((a, idx) => (
+                <RowEditor key={a.id} a={a} idx={idx} onUpdate={updateOne} />
               ))}
             </tbody>
           </table>

@@ -1,3 +1,5 @@
+import SegMapLeaflet from "@/app/components/segments/SegMapLeaflet";
+import SegmentHistoryCard from "@/app/components/segments/SegmentHistoryCard";
 import { fmtDuration } from "@/lib/format";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -26,9 +28,10 @@ export default async function SegmentsPage() {
     redirect("/?error=missing_token");
   }
 
-  const segments = await getStarredSegments(token);
-
-  console.log("Fetched segments:", segments);
+  const segments: DetailedSegment[] = await getStarredSegments(token);
+  segments.sort(
+    (a: DetailedSegment, b: DetailedSegment) => a.effort_count - b.effort_count,
+  );
 
   return (
     <div className="container mx-auto p-6">
@@ -48,6 +51,10 @@ export default async function SegmentsPage() {
             <div className="text-sm opacity-70">
               Avg Grade: {s.average_grade}%
             </div>
+
+            <SegmentHistoryCard segmentId={s.id} distanceMeters={s.distance} />
+
+            <div className="mt-3"></div>
           </li>
         ))}
       </ul>

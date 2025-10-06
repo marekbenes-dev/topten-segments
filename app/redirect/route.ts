@@ -72,5 +72,7 @@ export async function GET(req: Request) {
   });
 
   // Now you *can* send them to the authed area
-  return NextResponse.redirect(new URL("/activities", req.url));
+  return NextResponse.redirect(
+    new URL(`/activities/${new Date().getFullYear()}`, req.url),
+  );
 }

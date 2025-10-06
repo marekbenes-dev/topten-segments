@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import ExploreLinkCard from "./ExploreLinkCard";
 
+const activitiesLink = `activities/${new Date().getFullYear()}`;
+
 function NavItem({ href, label }: { href: string; label: string }) {
   const pathname = usePathname();
   const active = pathname === href || pathname.startsWith(href + "/");
@@ -22,8 +24,8 @@ function NavItem({ href, label }: { href: string; label: string }) {
 export default function SidebarNav() {
   return (
     <nav className="space-y-2">
-      <NavItem href="/activities" label="My Activities" />
-      <NavItem href="/segments" label="My Starred Segments" />
+      <NavItem href={activitiesLink} label="Activities" />
+      <NavItem href="/segments" label="Starred Segments" />
       <NavItem href="/refactor-activities" label="Refactor Activities" />
       <ExploreLinkCard />
     </nav>

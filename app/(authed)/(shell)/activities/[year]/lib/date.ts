@@ -6,6 +6,10 @@ export function startOfNextYearUtcEpoch(year: number) {
   return Math.floor(Date.UTC(year + 1, 0, 1, 0, 0, 0) / 1000);
 }
 
+export function startOfYearUTC(d: Date) {
+  return new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+}
+
 // --- helpers (UTC month math) ---------------------------------------------
 export function toEpochSeconds(d: Date) {
   return Math.floor(d.getTime() / 1000);

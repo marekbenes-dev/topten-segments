@@ -5,7 +5,6 @@ import {
   fmtKm,
   fmtPaceMinKm,
   iconForType,
-  monthWindowsUTC,
   prettyTypeLabel,
   startOfMonthUTC,
   startOfNextMonthUTC,
@@ -13,8 +12,8 @@ import {
   startOfYearUtcEpoch,
   toEpochSeconds,
 } from "./lib";
-import { MONTHS } from "./constants";
 import { fmtDuration } from "@/lib/format";
+import { MONTHS } from "./constants";
 
 async function fetchWindowPaged(
   token: string,
@@ -23,7 +22,7 @@ async function fetchWindowPaged(
   init: RequestInit,
 ): Promise<SummaryActivity[]> {
   const perPage = 200;
-  const out: SummaryActivity[] = [];
+  const allActivities: SummaryActivity[] = [];
   for (let page = 1; ; page++) {
     const url = new URL("https://www.strava.com/api/v3/athlete/activities");
     url.searchParams.set("after", String(afterEpoch));
@@ -42,59 +41,64 @@ async function fetchWindowPaged(
     }
 
     const batch = (await res.json()) as SummaryActivity[];
-    out.push(...batch);
+    allActivities.push(...batch);
     if (batch.length < perPage) break;
   }
-  return out;
+
+  return allActivities;
 }
 
+// Fetches (1) rest-of-year cached, (2) current month no-cache.
+// Assumes your typical range is within the current year.
+// If you sometimes query across years, see the note below.
 async function fetchAllActivities(
   token: string,
   afterEpoch: number,
-  beforeEpoch: number,
+  beforeEpochExclusive: number,
 ): Promise<SummaryActivity[]> {
   const now = new Date();
-  const currentMonthStart = toEpochSeconds(startOfMonthUTC(now));
+  const monthStart = toEpochSeconds(startOfMonthUTC(now));
   const nextMonthStart = toEpochSeconds(startOfNextMonthUTC(now));
-  const beforeExclusive = beforeEpoch;
 
   const all: SummaryActivity[] = [];
+  const olderEnd = Math.min(beforeEpochExclusive, monthStart);
 
-  for (const [winAfter, winBeforeExcl] of monthWindowsUTC(
-    afterEpoch,
-    beforeExclusive,
-  )) {
-    const windowOverlapsCurrentMonth =
-      winAfter < nextMonthStart && winBeforeExcl > currentMonthStart;
+  if (afterEpoch < olderEnd) {
+    // Tag by year(s) covered, so you can revalidateTag('strava-2025')
+    const yStart = new Date(afterEpoch * 1000).getUTCFullYear();
+    const yEnd = new Date((olderEnd - 1) * 1000).getUTCFullYear();
+    const tags: string[] = [];
+    for (let y = yStart; y <= yEnd; y++) tags.push(`strava-${y}`);
 
-    if (windowOverlapsCurrentMonth) {
-      // This window is (at least partly) the current month -> always fresh
-      const fresh = await fetchWindowPaged(token, winAfter, winBeforeExcl, {
-        cache: "no-store",
-      });
-      all.push(...fresh);
-    } else {
-      // Older month -> cache on the server for 1 month (tagged by yyyy-mm for optional manual revalidate)
-      const d = new Date(winAfter * 1000);
-      const tag = `strava-${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-      const cached = await fetchWindowPaged(token, winAfter, winBeforeExcl, {
-        next: { revalidate: 2628000, tags: [tag] },
-      });
-      all.push(...cached);
-    }
+    const cached = await fetchWindowPaged(token, afterEpoch, olderEnd, {
+      next: { revalidate: 2628000, tags },
+    });
+    all.push(...cached);
+  }
+
+  // ---- Current month window: fetched fresh
+  const currStart = Math.max(afterEpoch, monthStart);
+  const currEnd = Math.min(beforeEpochExclusive, nextMonthStart);
+
+  if (currStart < currEnd) {
+    const fresh = await fetchWindowPaged(token, currStart, currEnd, {
+      cache: "no-store",
+    });
+    all.push(...fresh);
   }
 
   return all;
 }
 
 export default async function ActivitiesPage({
-  searchParams,
+  params,
 }: {
-  searchParams?: Promise<{ year?: string }>;
+  params?: Promise<{ year?: string }>;
 }) {
-  const sp = (await searchParams) ?? {};
+  const sp = (await params) ?? {};
   const cookieStore = await cookies();
   const token = cookieStore.get("strava_access_token")?.value;
+
   if (!token) redirect("/?no_token");
 
   const now = new Date();
@@ -109,6 +113,7 @@ export default async function ActivitiesPage({
   // check if year is current year to prevent going into the future
   const before =
     nowYear === year ? toEpochSeconds(now) : startOfNextYearUtcEpoch(year);
+
   const activities = await fetchAllActivities(token, after, before);
 
   // Initialize 12 months
@@ -197,7 +202,7 @@ export default async function ActivitiesPage({
       <div className="mb-4 flex items-center gap-3">
         <Link
           prefetch={false}
-          href={`/activities?year=${prevYear}`}
+          href={`/activities/${prevYear}`}
           className="border rounded px-3 py-2 hover:bg-gray-50"
           aria-disabled={prevYear < 2010}
         >
@@ -205,7 +210,7 @@ export default async function ActivitiesPage({
         </Link>
         <h1 className="text-2xl font-bold">Activities · {year}</h1>
         <Link
-          href={`/activities?year=${nextYear}`}
+          href={`/activities/${nextYear}`}
           className={`border rounded px-3 py-2 ${year >= nowYear ? "opacity-50 pointer-events-none" : "hover:bg-gray-50"}`}
         >
           {nextYear} →
@@ -256,7 +261,7 @@ export default async function ActivitiesPage({
                         .sort((a, b) => b[1].moving - a[1].moving)
                         .map(([type, t]) => (
                           <li key={type} className="flex justify-between">
-                            <span className="w-50 opacity-80 inline-flex items-center gap-2">
+                            <span className="opacity-80 inline-flex items-center gap-2">
                               <span aria-hidden="true">
                                 {iconForType(type)}
                               </span>
@@ -264,9 +269,13 @@ export default async function ActivitiesPage({
                                 {prettyTypeLabel(type)} ({t.count})
                               </span>
                             </span>
-                            <div className="w-50 flex justify-between tabular-nums">
-                              <span>{t.distance > 0 && fmtKm(t.distance)}</span>
-                              <span>{fmtDuration(t.moving, true)}</span>
+                            <div className="flex justify-between tabular-nums">
+                              <span className="px-2">
+                                {t.distance > 0 && fmtKm(t.distance)}
+                              </span>
+                              <span className="w-[60px] flex justify-end">
+                                {fmtDuration(t.moving, true)}
+                              </span>
                             </div>
                           </li>
                         ))}
