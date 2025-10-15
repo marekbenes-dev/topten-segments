@@ -23,4 +23,7 @@ type SummaryActivity = {
   elapsed_time: number; // seconds
   average_watts?: number | null; // rides only; may be missing
   weighted_average_watts?: number | null; // sometimes present
+  max_heartrate?: number | null;
+  max_watts: number | null; // rides only; may be missing,
+  average_heartrate: number | null;
 };

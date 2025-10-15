@@ -116,6 +116,32 @@ export default async function ActivitiesPage({
 
   const activities = await fetchAllActivities(token, after, before);
 
+  function pickActivityStats(activity: SummaryActivity) {
+    const {
+      max_heartrate,
+      moving_time,
+      start_date,
+      sport_type,
+      weighted_average_watts,
+      max_watts,
+      average_heartrate,
+      average_watts,
+    } = activity;
+    return {
+      max_heartrate,
+      moving_time,
+      start_date,
+      sport_type,
+      weighted_average_watts,
+      max_watts,
+      average_heartrate,
+      average_watts,
+    };
+  }
+
+  const filtered = activities.map(pickActivityStats);
+  console.log("Filtered Activities:", filtered.slice(0, 100));
+
   // Initialize 12 months
   const months: MonthSummary[] = Array.from({ length: 12 }, (_, i) => ({
     monthIdx: i,

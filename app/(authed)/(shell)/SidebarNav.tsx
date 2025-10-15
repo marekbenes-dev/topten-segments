@@ -12,9 +12,14 @@ function NavItem({ href, label }: { href: string; label: string }) {
   return (
     <Link
       href={href}
-      className={`block rounded px-3 py-2 text-sm ${
-        active ? "bg-gray-100 font-medium" : "hover:bg-gray-50"
-      }`}
+      className={[
+        "block rounded-md px-2 py-2 transition",
+        "hover:bg-foreground/10 hover:text-foreground hover:dark:bg-white/10",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600",
+        active
+          ? "bg-foreground/10 text-foreground dark:bg-white/10 font-semibold"
+          : "text-slate-800 dark:text-slate-100",
+      ].join(" ")}
     >
       {label}
     </Link>

@@ -58,7 +58,13 @@ export default function ExploreLinkCard() {
   };
 
   return (
-    <div className="block rounded px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer">
+    <div
+      className={[
+        "block rounded-md px-2 py-2 transition",
+        "hover:bg-foreground/10 hover:text-foreground hover:dark:bg-white/10",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600",
+      ].join(" ")}
+    >
       <p className="text-sm mb-2">
         {err ? (
           <span className="text-red-600">{err}</span>

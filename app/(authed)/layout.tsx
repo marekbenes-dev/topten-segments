@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { Button } from "@/components/ui/button";
+import ThemeToggle from "../components/ThemeToggle";
 
 export default async function AuthedLayout({
   children,
@@ -16,6 +17,7 @@ export default async function AuthedLayout({
     <div className="min-h-screen">
       <nav className="border-b">
         <div className="container mx-auto p-4 flex gap-4">
+          <ThemeToggle></ThemeToggle>
           <form
             action="/api/auth/deauthorize"
             method="post"

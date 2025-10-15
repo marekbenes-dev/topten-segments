@@ -25,6 +25,20 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                const KEY = 'topten-segments-theme';
+                const saved = localStorage.getItem(KEY);
+                const dark = saved === 'dark';
+                document.documentElement.classList.toggle('dark', dark);
+              } catch {}
+            `,
+          }}
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
