@@ -1,10 +1,10 @@
+import { StravaCookie } from "@/app/constants/tokens";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
-  const strava_access_token =
-    req.cookies.get("strava_access_token")?.value || null;
+  const accessToken = req.cookies.get(StravaCookie.AccessToken)?.value || null;
 
-  if (!strava_access_token) {
+  if (!accessToken) {
     return NextResponse.json(
       { ok: false, error: "Missing accessToken" },
       { status: 400 },
@@ -13,16 +13,19 @@ export async function POST(req: NextRequest) {
 
   await fetch("https://www.strava.com/oauth/deauthorize", {
     method: "POST",
-    headers: { Authorization: `Bearer ${strava_access_token}` },
+    headers: { Authorization: `Bearer ${accessToken}` },
     cache: "no-store",
   });
 
   const redirect = NextResponse.redirect(new URL("/", req.url), {
     status: 303,
   });
-  redirect.cookies.delete("strava_access_token");
-  redirect.cookies.delete("strava_refresh_token");
-  redirect.cookies.delete("strava_geo_lat");
-  redirect.cookies.delete("strava_geo_lng");
+
+  redirect.cookies.delete(StravaCookie.AccessToken);
+  redirect.cookies.delete(StravaCookie.RefreshToken);
+  redirect.cookies.delete(StravaCookie.GeoLat);
+  redirect.cookies.delete(StravaCookie.GeoLng);
+  redirect.cookies.delete(StravaCookie.GeoRadius);
+
   return redirect;
 }

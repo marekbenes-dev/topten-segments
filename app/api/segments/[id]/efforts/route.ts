@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { StravaCookie } from "@/app/constants/tokens";
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +59,7 @@ export async function GET(
   console.log("GET /api/segments/[id]/efforts", await params, req);
   const p = await params;
   console.log(p, "params");
-  const token = (await cookies()).get("strava_access_token")?.value;
+  const token = (await cookies()).get(StravaCookie.AccessToken)?.value;
 
   if (!token) {
     return NextResponse.json(

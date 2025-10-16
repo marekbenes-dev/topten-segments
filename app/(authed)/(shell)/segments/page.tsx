@@ -1,5 +1,6 @@
 import SegMapLeaflet from "@/app/components/segments/SegMapLeaflet";
 import SegmentHistoryCard from "@/app/components/segments/SegmentHistoryCard";
+import { StravaCookie } from "@/app/constants/tokens";
 import { fmtDuration } from "@/lib/format";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -22,7 +23,7 @@ async function getStarredSegments(accessToken: string) {
 
 export default async function SegmentsPage() {
   const cookieStore = await cookies();
-  const token = String(cookieStore.get("strava_access_token")?.value);
+  const token = String(cookieStore.get(StravaCookie.AccessToken)?.value);
 
   if (!token) {
     redirect("/?error=missing_token");

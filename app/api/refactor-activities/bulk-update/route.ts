@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { StravaCookie } from "@/app/constants/tokens";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ async function stravaPut(
 
 export async function POST(req: NextRequest) {
   try {
-    const token = (await cookies()).get("strava_access_token")?.value;
+    const token = (await cookies()).get(StravaCookie.AccessToken)?.value;
     if (!token) {
       return NextResponse.json({ error: "Missing token" }, { status: 401 });
     }

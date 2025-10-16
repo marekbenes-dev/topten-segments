@@ -2,13 +2,14 @@ import { redirect } from "next/navigation";
 import { boundsFromCenterRadius } from "../../../../lib/geo";
 import { cookies } from "next/headers";
 import ExploreMap from "./ExploreMap";
+import { StravaCookie } from "@/app/constants/tokens";
 
 export default async function ExplorePage() {
   const cookieStore = await cookies();
-  const token = cookieStore.get("strava_access_token")?.value;
-  const latCookie = cookieStore.get("strava_geo_lat")?.value;
-  const lngCookie = cookieStore.get("strava_geo_lng")?.value;
-  const radiusCookie = cookieStore.get("strava_geo_radius")?.value;
+  const token = cookieStore.get(StravaCookie.AccessToken)?.value;
+  const latCookie = cookieStore.get(StravaCookie.GeoLat)?.value;
+  const lngCookie = cookieStore.get(StravaCookie.GeoLng)?.value;
+  const radiusCookie = cookieStore.get(StravaCookie.GeoRadius)?.value;
 
   if (!latCookie || !lngCookie) redirect("/?error=no_geo"); // no geo? fall back
 

@@ -15,10 +15,7 @@ export async function GET(req: Request) {
     return NextResponse.redirect(new URL("/?error=missing_code", req.url));
   }
 
-  const {
-    CLIENT_ID = "178019",
-    CLIENT_SECRET = "72138331b27efa6dd55a0275ce203d7e4b0fb888",
-  } = process.env;
+  const { CLIENT_ID, CLIENT_SECRET } = process.env;
   if (!CLIENT_ID || !CLIENT_SECRET) {
     return NextResponse.redirect(new URL("/?error=server_misconfig", req.url));
   }
@@ -55,7 +52,7 @@ export async function GET(req: Request) {
 
   // Set secure, httpOnly cookies on the server
   const expires = new Date(token.expires_at * 1000);
-  cookieStore.set("strava_access_token", token.access_token, {
+  cookieStore.set("StravaCookie.AccessToken", token.access_token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",

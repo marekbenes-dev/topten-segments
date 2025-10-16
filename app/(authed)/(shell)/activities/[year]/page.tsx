@@ -14,6 +14,7 @@ import {
 } from "./lib";
 import { fmtDuration } from "@/lib/format";
 import { MONTHS } from "./constants";
+import { StravaCookie } from "@/app/constants/tokens";
 
 async function fetchWindowPaged(
   token: string,
@@ -97,7 +98,7 @@ export default async function ActivitiesPage({
 }) {
   const sp = (await params) ?? {};
   const cookieStore = await cookies();
-  const token = cookieStore.get("strava_access_token")?.value;
+  const token = cookieStore.get(StravaCookie.AccessToken)?.value;
 
   if (!token) redirect("/?no_token");
 
