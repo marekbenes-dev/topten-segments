@@ -6,8 +6,6 @@ import {
   fmtPaceMinKm,
   iconForType,
   prettyTypeLabel,
-  startOfMonthUTC,
-  startOfNextMonthUTC,
   startOfNextYearUtcEpoch,
   startOfYearUtcEpoch,
   toEpochSeconds,
@@ -15,81 +13,8 @@ import {
 import { fmtDuration } from "@/lib/format";
 import { MONTHS } from "./constants";
 import { StravaCookie } from "@/app/constants/tokens";
-
-async function fetchWindowPaged(
-  token: string,
-  afterEpoch: number,
-  beforeEpochExclusive: number,
-  init: RequestInit,
-): Promise<SummaryActivity[]> {
-  const perPage = 200;
-  const allActivities: SummaryActivity[] = [];
-  for (let page = 1; ; page++) {
-    const url = new URL("https://www.strava.com/api/v3/athlete/activities");
-    url.searchParams.set("after", String(afterEpoch));
-    url.searchParams.set("before", String(beforeEpochExclusive - 1)); // exclusive upper bound
-    url.searchParams.set("page", String(page));
-    url.searchParams.set("per_page", String(perPage));
-
-    const res = await fetch(url, {
-      ...init,
-      headers: { Authorization: `Bearer ${token}`, ...(init.headers || {}) },
-    });
-
-    if (!res.ok) {
-      console.error("Activities fetch failed", res.status, await res.text());
-      redirect("/?error=activities_failed");
-    }
-
-    const batch = (await res.json()) as SummaryActivity[];
-    allActivities.push(...batch);
-    if (batch.length < perPage) break;
-  }
-
-  return allActivities;
-}
-
-// Fetches (1) rest-of-year cached, (2) current month no-cache.
-// Assumes your typical range is within the current year.
-// If you sometimes query across years, see the note below.
-async function fetchAllActivities(
-  token: string,
-  afterEpoch: number,
-  beforeEpochExclusive: number,
-): Promise<SummaryActivity[]> {
-  const now = new Date();
-  const monthStart = toEpochSeconds(startOfMonthUTC(now));
-  const nextMonthStart = toEpochSeconds(startOfNextMonthUTC(now));
-
-  const all: SummaryActivity[] = [];
-  const olderEnd = Math.min(beforeEpochExclusive, monthStart);
-
-  if (afterEpoch < olderEnd) {
-    // Tag by year(s) covered, so you can revalidateTag('strava-2025')
-    const yStart = new Date(afterEpoch * 1000).getUTCFullYear();
-    const yEnd = new Date((olderEnd - 1) * 1000).getUTCFullYear();
-    const tags: string[] = [];
-    for (let y = yStart; y <= yEnd; y++) tags.push(`strava-${y}`);
-
-    const cached = await fetchWindowPaged(token, afterEpoch, olderEnd, {
-      next: { revalidate: 2628000, tags },
-    });
-    all.push(...cached);
-  }
-
-  // ---- Current month window: fetched fresh
-  const currStart = Math.max(afterEpoch, monthStart);
-  const currEnd = Math.min(beforeEpochExclusive, nextMonthStart);
-
-  if (currStart < currEnd) {
-    const fresh = await fetchWindowPaged(token, currStart, currEnd, {
-      cache: "no-store",
-    });
-    all.push(...fresh);
-  }
-
-  return all;
-}
+import { fetchAllActivities, pickActivityStats } from "./lib/activities";
+import { summarizeByMonth } from "./lib/aggregate";
 
 export default async function ActivitiesPage({
   params,
@@ -117,105 +42,11 @@ export default async function ActivitiesPage({
 
   const activities = await fetchAllActivities(token, after, before);
 
-  function pickActivityStats(activity: SummaryActivity) {
-    const {
-      max_heartrate,
-      moving_time,
-      start_date,
-      sport_type,
-      weighted_average_watts,
-      max_watts,
-      average_heartrate,
-      average_watts,
-    } = activity;
-    return {
-      max_heartrate,
-      moving_time,
-      start_date,
-      sport_type,
-      weighted_average_watts,
-      max_watts,
-      average_heartrate,
-      average_watts,
-    };
-  }
-
   const filtered = activities.map(pickActivityStats);
   console.log("Filtered Activities:", filtered.slice(0, 100));
 
-  // Initialize 12 months
-  const months: MonthSummary[] = Array.from({ length: 12 }, (_, i) => ({
-    monthIdx: i,
-    totals: { distance: 0, moving: 0, count: 0 },
-    byType: {},
-    items: [],
-  }));
-
-  for (const a of activities) {
-    const d = new Date(a.start_date_local ?? a.start_date);
-    const idx = d.getMonth(); // 0..11 in *local* time
-    const m = months[idx];
-
-    m.items.push(a);
-    m.totals.distance += a.distance;
-    m.totals.moving += a.moving_time;
-    m.totals.count += 1;
-
-    const t = a.type || a.sport_type || "Other";
-
-    if (!m.byType[t]) m.byType[t] = { distance: 0, moving: 0, count: 0 };
-    m.byType[t].distance += a.distance;
-    m.byType[t].moving += a.moving_time;
-    m.byType[t].count += 1;
-
-    if (t === "Run" || t === "VirtualRun") {
-      if (!m.longestRun || a.distance > m.longestRun.distance) m.longestRun = a;
-    }
-
-    if (t === "Ride" || t === "VirtualRide") {
-      if (!m.longestRide || a.distance > m.longestRide.distance)
-        m.longestRide = a;
-    }
-  }
-
-  const isRide = (t?: string) => t === "Ride" || t === "VirtualRide";
-  const isRun = (t?: string) => t === "Run" || t === "VirtualRun";
-
-  for (const m of months) {
-    const agg = m.items.reduce(
-      (acc, a) => {
-        const mt = a.moving_time ?? 0;
-        const dist = a.distance ?? 0;
-        if (mt <= 0 || dist <= 0) return acc;
-
-        if (isRide(a.type)) {
-          acc.totalRideTime += mt;
-          acc.totalWatts +=
-            mt * (a.weighted_average_watts ?? a.average_watts ?? 0);
-        }
-
-        if (isRun(a.type)) {
-          acc.totalRunTime += mt;
-          acc.totalDistance += dist;
-        }
-
-        return acc;
-      },
-      { totalRideTime: 0, totalWatts: 0, totalRunTime: 0, totalDistance: 0 },
-    );
-
-    const { totalRideTime, totalWatts, totalRunTime, totalDistance } = agg;
-
-    m.avgRideWatts =
-      totalWatts && totalRideTime
-        ? Math.round(totalWatts / totalRideTime)
-        : null;
-
-    m.avgPaceRuns =
-      totalDistance && totalRunTime
-        ? String((totalRunTime * 1000) / (totalDistance * 60)) // minutes/km (decimal)
-        : null;
-  }
+  // Group by month
+  const months = summarizeByMonth(activities);
 
   // Decide how many tiles to show
   const monthsToShow = year < nowYear ? 12 : Math.min(12, now.getMonth() + 1); // up to current month inclusive

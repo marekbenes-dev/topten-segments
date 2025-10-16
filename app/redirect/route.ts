@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { StravaCookie } from "../constants/tokens";
 
 type StravaTokenResponse = {
   access_token: string;
@@ -52,7 +53,7 @@ export async function GET(req: Request) {
 
   // Set secure, httpOnly cookies on the server
   const expires = new Date(token.expires_at * 1000);
-  cookieStore.set("StravaCookie.AccessToken", token.access_token, {
+  cookieStore.set(StravaCookie.AccessToken, token.access_token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -60,7 +61,7 @@ export async function GET(req: Request) {
     expires,
   });
 
-  cookieStore.set("strava_refresh_token", token.refresh_token, {
+  cookieStore.set(StravaCookie.RefreshToken, token.refresh_token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
