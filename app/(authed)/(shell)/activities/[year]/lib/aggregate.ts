@@ -1,3 +1,5 @@
+import type { SummaryActivity } from "@/app/types/activity";
+
 const isRide = (t?: string) => t === "Ride" || t === "VirtualRide";
 const isRun = (t?: string) => t === "Run" || t === "VirtualRun";
 

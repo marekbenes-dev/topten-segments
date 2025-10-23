@@ -3,6 +3,7 @@ import { boundsFromCenterRadius } from "../../../../lib/geo";
 import { cookies } from "next/headers";
 import ExploreMap from "./ExploreMap";
 import { StravaCookie } from "@/app/constants/tokens";
+import type { ExploreSegment } from "./types/types";
 
 export default async function ExplorePage() {
   const cookieStore = await cookies();

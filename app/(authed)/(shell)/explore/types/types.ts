@@ -1,4 +1,6 @@
-type ExploreSegment = {
+import type { LatLng } from "@/app/types/segment";
+
+export type ExploreSegment = {
   id: number;
   name: string;
   climb_category: number;

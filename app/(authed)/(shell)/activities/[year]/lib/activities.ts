@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { toEpochSeconds, startOfMonthUTC, startOfNextMonthUTC } from "./date";
+import type { SummaryActivity } from "@/app/types/activity";
 
 export async function fetchWindowPaged(
   token: string,
