@@ -1,76 +1,92 @@
-const isRide = (t?: string) => t === "Ride" || t === "VirtualRide";
-const isRun = (t?: string) => t === "Run" || t === "VirtualRun";
+import { MonthSummary, SummaryActivity } from "@/app/types/activity";
 
-export type MonthSummary = {
-  monthIdx: number;
-  totals: { distance: number; moving: number; count: number };
-  byType: Record<string, { distance: number; moving: number; count: number }>;
-  items: SummaryActivity[];
-  longestRun?: SummaryActivity;
-  longestRide?: SummaryActivity;
-  avgRideWatts?: number | null;
-  avgPaceRuns?: string | null;
-};
+const isRide = (activityType?: string) =>
+  activityType === "Ride" || activityType === "VirtualRide";
+const isRun = (activityType?: string) =>
+  activityType === "Run" || activityType === "VirtualRun";
 
 export function summarizeByMonth(
   activities: SummaryActivity[],
 ): MonthSummary[] {
-  const months: MonthSummary[] = Array.from({ length: 12 }, (_, i) => ({
-    monthIdx: i,
-    totals: { distance: 0, moving: 0, count: 0 },
-    byType: {},
-    items: [],
-  }));
+  const months: MonthSummary[] = Array.from(
+    { length: 12 },
+    (_, monthIndex) => ({
+      monthIdx: monthIndex,
+      totals: { distance: 0, moving: 0, count: 0 },
+      byType: {},
+      items: [],
+    }),
+  );
 
-  for (const a of activities) {
-    const d = new Date(a.start_date_local ?? a.start_date);
-    const m = months[d.getMonth()];
-    m.items.push(a);
+  for (const activity of activities) {
+    const date = new Date(activity.start_date_local ?? activity.start_date);
+    const month = months[date.getMonth()];
+    month.items.push(activity);
 
-    m.totals.distance += a.distance ?? 0;
-    m.totals.moving += a.moving_time ?? 0;
-    m.totals.count += 1;
+    month.totals.distance += activity.distance ?? 0;
+    month.totals.moving += activity.moving_time ?? 0;
+    month.totals.count += 1;
 
-    const t = a.type || a.sport_type || "Other";
-    m.byType[t] ??= { distance: 0, moving: 0, count: 0 };
-    m.byType[t].distance += a.distance ?? 0;
-    m.byType[t].moving += a.moving_time ?? 0;
-    m.byType[t].count += 1;
+    if (
+      activity.type === "Workout" &&
+      (activity.name.toLowerCase().includes("florb") ||
+        activity.name.toLowerCase().includes("futsal"))
+    ) {
+      activity.type = "Floorball";
+    }
 
-    if (isRun(t) && (!m.longestRun || a.distance > m.longestRun.distance))
-      m.longestRun = a;
-    if (isRide(t) && (!m.longestRide || a.distance > m.longestRide.distance))
-      m.longestRide = a;
+    const activityType = activity.type || activity.sport_type || "Other";
+    month.byType[activityType] ??= { distance: 0, moving: 0, count: 0 };
+    month.byType[activityType].distance += activity.distance ?? 0;
+    month.byType[activityType].moving += activity.moving_time ?? 0;
+    month.byType[activityType].count += 1;
+
+    if (
+      isRun(activityType) &&
+      (!month.longestRun || activity.distance > month.longestRun.distance)
+    )
+      month.longestRun = activity;
+    if (
+      isRide(activityType) &&
+      (!month.longestRide || activity.distance > month.longestRide.distance)
+    )
+      month.longestRide = activity;
   }
 
-  for (const m of months) {
-    const agg = m.items.reduce(
-      (acc, a) => {
-        const mt = a.moving_time ?? 0;
-        const dist = a.distance ?? 0;
-        if (mt <= 0 || dist <= 0) return acc;
-        if (isRide(a.type)) {
-          acc.totalRideTime += mt;
-          acc.totalWatts +=
-            mt * (a.weighted_average_watts ?? a.average_watts ?? 0);
+  for (const month of months) {
+    const aggregate = month.items.reduce(
+      (accumulator, activity) => {
+        const movingTime = activity.moving_time ?? 0;
+        const distance = activity.distance ?? 0;
+        if (movingTime <= 0 || distance <= 0) return accumulator;
+
+        if (isRide(activity.type)) {
+          accumulator.totalRideTime += movingTime;
+          accumulator.totalWatts +=
+            movingTime *
+            (activity.weighted_average_watts ?? activity.average_watts ?? 0);
         }
-        if (isRun(a.type)) {
-          acc.totalRunTime += mt;
-          acc.totalDistance += dist;
+
+        if (isRun(activity.type)) {
+          accumulator.totalRunTime += movingTime;
+          accumulator.totalDistance += distance;
         }
-        return acc;
+
+        return accumulator;
       },
       { totalRideTime: 0, totalWatts: 0, totalRunTime: 0, totalDistance: 0 },
     );
 
-    m.avgRideWatts =
-      agg.totalWatts && agg.totalRideTime
-        ? Math.round(agg.totalWatts / agg.totalRideTime)
+    month.avgRideWatts =
+      aggregate.totalWatts && aggregate.totalRideTime
+        ? Math.round(aggregate.totalWatts / aggregate.totalRideTime)
         : null;
 
-    m.avgPaceRuns =
-      agg.totalDistance && agg.totalRunTime
-        ? String((agg.totalRunTime * 1000) / (agg.totalDistance * 60))
+    month.avgPaceRuns =
+      aggregate.totalDistance && aggregate.totalRunTime
+        ? String(
+            (aggregate.totalRunTime * 1000) / (aggregate.totalDistance * 60),
+          )
         : null;
   }
 

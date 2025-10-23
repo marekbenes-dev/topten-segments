@@ -1,16 +1,14 @@
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
 import { Button } from "@/components/ui/button";
 import ThemeToggle from "../components/ThemeToggle";
-import { StravaCookie } from "../constants/tokens";
+import { getStravaTokenOrThrow } from "@/lib/token";
 
 export default async function AuthedLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(StravaCookie.AccessToken)?.value;
+  const token = await getStravaTokenOrThrow();
 
   if (!token) redirect("/?no_token"); // not signed in → back to landing
 

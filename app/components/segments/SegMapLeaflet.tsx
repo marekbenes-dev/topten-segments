@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import { useMemo } from "react";
 import dynamic from "next/dynamic";
 import polyline from "@mapbox/polyline";
 
@@ -45,7 +45,7 @@ export default function SegMapLeaflet({
   summaryPolyline: string;
   height?: number;
 }) {
-  const latlngs = React.useMemo<LatLng[]>(
+  const latlngs = useMemo<LatLng[]>(
     () => polyline.decode(summaryPolyline) as LatLng[],
     [summaryPolyline],
   );

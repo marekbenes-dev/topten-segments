@@ -1,4 +1,3 @@
-// app/components/cookie-notice.tsx
 "use client";
 
 import { useEffect, useState } from "react";

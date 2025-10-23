@@ -1,10 +1,11 @@
 "use client";
 
 import * as React from "react";
+import { useEffect, useRef, useState } from "react";
 
-const H = 60; // svg height
-const W = 280; // svg width
-const P = 6; // padding
+const SVG_HEIGHT = 60; // svg height in px
+const SVG_WIDTH = 280; // svg width in px
+const PADDING = 6; // padding inside the svg
 
 type Props = {
   segmentId: number;
@@ -13,67 +14,94 @@ type Props = {
 
 type Effort = { start_date: string; elapsed_time: number; distance: number };
 
-function toSpeedKmh(d: number, t: number) {
-  // meters + seconds -> km/h
-  if (!d || !t) return 0;
-  return (d / t) * 3.6;
+/**
+ * Convert meters + seconds -> km/h.
+ * Returns 0 for invalid inputs (to avoid div-by-zero or NaN).
+ */
+function toSpeedKmh(distanceMeters: number, elapsedSeconds: number): number {
+  if (!distanceMeters || !elapsedSeconds) return 0;
+  return (distanceMeters / elapsedSeconds) * 3.6;
 }
 
-function buildPath(xs: number[], ys: number[]) {
-  if (!xs.length) return "";
-  let d = `M ${xs[0]} ${ys[0]}`;
-  for (let i = 1; i < xs.length; i++) d += ` L ${xs[i]} ${ys[i]}`;
-  return d;
+/**
+ * Build an SVG path string from arrays of x- and y-coordinates.
+ * The path starts at the first point ("M x y") and then draws line segments ("L x y") to subsequent points.
+ *
+ * @param xCoordinates - array of x positions (in SVG coordinate space)
+ * @param yCoordinates - array of y positions (in SVG coordinate space)
+ * @returns an SVG path "d" attribute string or an empty string if no points provided
+ */
+function buildSvgPath(xCoordinates: number[], yCoordinates: number[]): string {
+  if (!xCoordinates.length) return "";
+  // Start path at first point
+  let path = `M ${xCoordinates[0]} ${yCoordinates[0]}`;
+  // Append line commands for remaining points
+  for (let i = 1; i < xCoordinates.length; i++) {
+    path += ` L ${xCoordinates[i]} ${yCoordinates[i]}`;
+  }
+  return path;
 }
 
 export default function SegmentHistoryCard({
   segmentId,
   distanceMeters,
 }: Props) {
-  const [efforts, setEfforts] = React.useState<Effort[] | null>(null);
-  const [error, setError] = React.useState<string | null>(null);
-  const [inView, setInView] = React.useState(false);
-  const ref = React.useRef<HTMLDivElement>(null);
+  const [efforts, setEfforts] = useState<Effort[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [inView, setInView] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
 
-  // Lazy load when card is visible
-  React.useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
+  /**
+   * Lazy-load pattern: use IntersectionObserver to mark component as "in view".
+   * Once the element enters the viewport (with a rootMargin), setInView(true) so the data fetch can start.
+   */
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    const observer = new IntersectionObserver(
       (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
+        if (entries.some((entry) => entry.isIntersecting)) {
           setInView(true);
         }
       },
       { rootMargin: "200px" },
     );
-    io.observe(el);
-    return () => io.disconnect();
+    observer.observe(element);
+    return () => observer.disconnect();
   }, []);
 
-  React.useEffect(() => {
+  /**
+   * Effect to fetch efforts when the card becomes visible.
+   * - Will only run once (efforts === null) after inView is true.
+   * - Uses AbortController to cancel the request if the component unmounts or dependencies change.
+   * - Sorts received efforts by start_date ascending before storing them.
+   */
+  useEffect(() => {
     if (!inView || efforts !== null) return;
+
     const controller = new AbortController();
+
     fetch(`/api/segments/${segmentId}/efforts`, {
       signal: controller.signal,
       cache: "no-store",
     })
-      .then(async (r) => {
-        if (!r.ok) throw new Error(await r.text());
-        return r.json();
+      .then(async (response) => {
+        if (!response.ok) throw new Error(await response.text());
+        return response.json();
       })
       .then((json) => {
-        const e: Effort[] = (json.efforts || []) as Effort[];
-        // sort by date asc (first -> latest)
-        e.sort(
+        const fetchedEfforts: Effort[] = (json.efforts || []) as Effort[];
+        // sort by date ascending (oldest -> newest)
+        fetchedEfforts.sort(
           (a, b) =>
             new Date(a.start_date).getTime() - new Date(b.start_date).getTime(),
         );
-        setEfforts(e);
+        setEfforts(fetchedEfforts);
       })
       .catch((e) => {
         if (e.name !== "AbortError") setError(String(e));
       });
+
     return () => controller.abort();
   }, [inView, segmentId, efforts]);
 
@@ -96,6 +124,15 @@ export default function SegmentHistoryCard({
   );
 }
 
+/**
+ * Sparkline component:
+ * - Transforms efforts into timestamp + speed points.
+ * - Computes scales for X (time) and Y (speed) that map values into SVG coordinates.
+ * - Draws a polyline (SVG path) and highlights the PR (max speed) point.
+ *
+ * @param efforts - array of efforts sorted by start_date ascending
+ * @param distanceMeters - fallback distance when an effort distance is zero
+ */
 function Sparkline({
   efforts,
   distanceMeters,
@@ -103,57 +140,71 @@ function Sparkline({
   efforts: Effort[];
   distanceMeters: number;
 }) {
-  // map efforts to (t, speed)
+  // Map efforts to points with date (ms) and speed (km/h)
   const points = efforts.map((e) => ({
-    date: new Date(e.start_date).getTime(),
-    speed: toSpeedKmh(e.distance || distanceMeters, e.elapsed_time),
+    dateMs: new Date(e.start_date).getTime(),
+    speedKmh: toSpeedKmh(e.distance || distanceMeters, e.elapsed_time),
   }));
 
-  // x = time, y = speed (higher is better)
-  const minX = points[0].date;
-  const maxX = points[points.length - 1].date;
-  const minY = Math.min(...points.map((p) => p.speed));
-  const maxY = Math.max(...points.map((p) => p.speed));
+  // X = time (ms), Y = speed (km/h)
+  const minTime = points[0].dateMs;
+  const maxTime = points[points.length - 1].dateMs;
+  const minSpeed = Math.min(...points.map((p) => p.speedKmh));
+  const maxSpeed = Math.max(...points.map((p) => p.speedKmh));
 
-  const xScale = (v: number) =>
-    P + (maxX === minX ? 0 : ((v - minX) / (maxX - minX)) * (W - 2 * P));
-  const yScale = (v: number) => {
-    // higher speed should be higher on the chart
-    if (maxY === minY) return H / 2;
-    const r = (v - minY) / (maxY - minY);
-    return H - P - r * (H - 2 * P);
+  /**
+   * Scale a time value (ms) to an x coordinate in SVG space.
+   * If all times are equal, place them at the left padding.
+   */
+  const scaleX = (timeMs: number) =>
+    PADDING +
+    (maxTime === minTime
+      ? 0
+      : ((timeMs - minTime) / (maxTime - minTime)) * (SVG_WIDTH - 2 * PADDING));
+
+  /**
+   * Scale a speed value (km/h) to a y coordinate in SVG space.
+   * Higher speed should be visually higher on the chart (smaller SVG y).
+   * If all speeds are equal, return center vertical position.
+   */
+  const scaleY = (speedKmh: number) => {
+    if (maxSpeed === minSpeed) return SVG_HEIGHT / 2;
+    const ratio = (speedKmh - minSpeed) / (maxSpeed - minSpeed);
+    return SVG_HEIGHT - PADDING - ratio * (SVG_HEIGHT - 2 * PADDING);
   };
 
-  const xs = points.map((p) => xScale(p.date));
-  const ys = points.map((p) => yScale(p.speed));
-  const path = buildPath(xs, ys);
+  // Build arrays of scaled coordinates for the SVG path
+  const xCoordinates = points.map((p) => scaleX(p.dateMs));
+  const yCoordinates = points.map((p) => scaleY(p.speedKmh));
+  const pathD = buildSvgPath(xCoordinates, yCoordinates);
 
-  const first = points[0].speed;
-  const latest = points[points.length - 1].speed;
-  const changePct = first > 0 ? ((latest - first) / first) * 100 : 0;
+  const firstSpeed = points[0].speedKmh;
+  const latestSpeed = points[points.length - 1].speedKmh;
+  const changePct =
+    firstSpeed > 0 ? ((latestSpeed - firstSpeed) / firstSpeed) * 100 : 0;
 
-  // PR (max speed)
-  const pr = points.reduce(
-    (best, p) => (p.speed > best.speed ? p : best),
+  // Find PR (max speed) point and its index for drawing the dot
+  const prPoint = points.reduce(
+    (best, p) => (p.speedKmh > best.speedKmh ? p : best),
     points[0],
   );
-  const prIdx = points.findIndex((p) => p === pr);
+  const prIndex = points.findIndex((p) => p === prPoint);
 
   return (
     <div>
-      <svg width={W} height={H} className="block">
-        <rect x={0} y={0} width={W} height={H} fill="none" />
+      <svg width={SVG_WIDTH} height={SVG_HEIGHT} className="block">
+        <rect x={0} y={0} width={SVG_WIDTH} height={SVG_HEIGHT} fill="none" />
         {/* line */}
-        <path d={path} stroke="currentColor" fill="none" strokeWidth={1.5} />
+        <path d={pathD} stroke="currentColor" fill="none" strokeWidth={1.5} />
         {/* PR dot */}
-        <circle cx={xs[prIdx]} cy={ys[prIdx]} r={2.5} />
+        <circle cx={xCoordinates[prIndex]} cy={yCoordinates[prIndex]} r={2.5} />
       </svg>
       <div className="mt-1 text-xs text-gray-700 flex flex-wrap gap-x-3 gap-y-1">
         <span>
           Attempts: <strong>{points.length}</strong>
         </span>
         <span>
-          PR speed: <strong>{pr.speed.toFixed(1)} km/h</strong>
+          PR speed: <strong>{prPoint.speedKmh.toFixed(1)} km/h</strong>
         </span>
         <span>
           Change since first:{" "}

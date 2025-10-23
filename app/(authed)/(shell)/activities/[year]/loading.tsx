@@ -1,4 +1,3 @@
-// app/activities/loading.tsx
 export default function Loading() {
   // Show 12 tiles; it's fine if the target year has fewer months completed.
   const tiles = Array.from({ length: 12 });

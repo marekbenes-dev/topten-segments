@@ -109,10 +109,10 @@ function RowEditor({ a, idx, onUpdate }: RowEditorProps) {
 
 export default function ResultsPage() {
   const sp = useSearchParams();
-  const q = (sp.get("q") || "").trim();
+  const activityName = (sp.get("activityName") || "").trim();
   const from = sp.get("from") || "";
   const to = sp.get("to") || "";
-  const hasSearch = Boolean(q || from || to);
+  const hasSearch = Boolean(activityName || from || to);
 
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -131,7 +131,7 @@ export default function ResultsPage() {
     }
     const controller = new AbortController();
     const qs = new URLSearchParams();
-    if (q) qs.set("q", q);
+    if (activityName) qs.set("activityName", activityName);
     if (from) qs.set("from", from);
     if (to) qs.set("to", to);
 
@@ -153,7 +153,7 @@ export default function ResultsPage() {
       .finally(() => setLoading(false));
 
     return () => controller.abort();
-  }, [q, from, to, hasSearch]);
+  }, [activityName, from, to, hasSearch]);
 
   async function updateOne(id: number, name?: string, type?: string) {
     if (!name && !type) return;
@@ -233,9 +233,9 @@ export default function ResultsPage() {
           <h2 className="font-semibold">Matched activities</h2>
           <p className="text-sm text-gray-600">
             Filter:{" "}
-            {q ? (
+            {activityName ? (
               <>
-                name contains <span className="font-mono">{q}</span>
+                name contains <span className="font-mono">{activityName}</span>
               </>
             ) : (
               "—"
@@ -297,7 +297,7 @@ export default function ResultsPage() {
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 text-left">
+              <tr className="text-left">
                 <th className="px-4 py-2 w-8">#</th>
                 <th className="px-4 py-2">Name</th>
                 <th className="px-4 py-2">Date</th>

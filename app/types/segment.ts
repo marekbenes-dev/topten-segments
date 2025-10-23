@@ -17,7 +17,7 @@ type SummaryPRSegmentEffort = {
 type Xoms = {
   kom?: string; // seconds, but returned as a string (e.g. "130")
   qom?: string; // "
-  cr?: string;  // "
+  cr?: string; // "
 };
 
 type SummarySegmentEffort = {
@@ -36,7 +36,7 @@ type PolylineMap = {
   summary_polyline: string;
 };
 
-type DetailedSegment = {
+export type DetailedSegment = {
   id: number;
   name: string;
   activity_type: "Ride" | "Run";
@@ -62,5 +62,5 @@ type DetailedSegment = {
   athlete_count: number;
   hazardous: boolean;
   star_count: number;
-  xoms?: Xoms
+  xoms?: Xoms;
 };

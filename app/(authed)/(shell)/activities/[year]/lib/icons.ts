@@ -31,6 +31,7 @@ export function iconForType(type: string): string {
     Wheelchair: "🦽",
     Handcycle: "🚴",
     Row: "🚣",
+    Floorball: "🏑",
   };
   return map[type] ?? "🏃";
 }

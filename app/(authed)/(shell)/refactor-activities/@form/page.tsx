@@ -10,7 +10,7 @@ export default function FormPage() {
   const sp = useSearchParams();
   const pathname = usePathname();
 
-  const [name, setName] = React.useState(sp.get("q") ?? "");
+  const [name, setName] = React.useState(sp.get("activityName") ?? "");
   const [dateFrom, setDateFrom] = React.useState(sp.get("from") ?? "");
   const [dateTo, setDateTo] = React.useState(sp.get("to") ?? "");
   const [error, setError] = React.useState<string | null>(null);
@@ -25,17 +25,21 @@ export default function FormPage() {
     }
 
     const params = new URLSearchParams(sp.toString());
-    params.delete("q");
+    params.delete("activityName");
     params.delete("from");
     params.delete("to");
 
-    if (name.trim()) params.set("q", name.trim());
+    if (name.trim()) params.set("activityName", name.trim());
     if (dateFrom) params.set("from", dateFrom);
     if (dateTo) params.set("to", dateTo);
 
-    const qs = params.toString();
+    const queryString = params.toString();
+    console.log(
+      "Navigating to:",
+      queryString ? `${pathname}?${queryString}` : pathname,
+    );
     // ⬇️ Navigate to the page (not the API). Results pane will react to this.
-    router.push(qs ? `${pathname}?${qs}` : pathname);
+    router.push(queryString ? `${pathname}?${queryString}` : pathname);
   }
 
   return (

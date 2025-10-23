@@ -1,5 +1,10 @@
 import { redirect } from "next/navigation";
-import { toEpochSeconds, startOfMonthUTC, startOfNextMonthUTC } from "./date";
+import {
+  toEpochSeconds,
+  startOfMonthUTC,
+  startOfNextMonthUTC,
+} from "../app/(authed)/(shell)/activities/[year]/lib/date";
+import { SummaryActivity } from "@/app/types/activity";
 
 export async function fetchWindowPaged(
   token: string,
@@ -11,6 +16,7 @@ export async function fetchWindowPaged(
   const allActivities: SummaryActivity[] = [];
   for (let page = 1; ; page++) {
     const url = new URL("https://www.strava.com/api/v3/athlete/activities");
+
     url.searchParams.set("after", String(afterEpoch));
     url.searchParams.set("before", String(beforeEpochExclusive - 1)); // exclusive upper bound
     url.searchParams.set("page", String(page));

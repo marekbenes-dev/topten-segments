@@ -3,10 +3,12 @@ import { boundsFromCenterRadius } from "../../../../lib/geo";
 import { cookies } from "next/headers";
 import ExploreMap from "./ExploreMap";
 import { StravaCookie } from "@/app/constants/tokens";
+import { getStravaTokenOrThrow } from "@/lib/token";
+import { ExploreSegment } from "./types/types";
 
 export default async function ExplorePage() {
   const cookieStore = await cookies();
-  const token = cookieStore.get(StravaCookie.AccessToken)?.value;
+  const token = await getStravaTokenOrThrow();
   const latCookie = cookieStore.get(StravaCookie.GeoLat)?.value;
   const lngCookie = cookieStore.get(StravaCookie.GeoLng)?.value;
   const radiusCookie = cookieStore.get(StravaCookie.GeoRadius)?.value;

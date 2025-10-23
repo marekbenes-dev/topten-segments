@@ -12,9 +12,9 @@ import {
 } from "./lib";
 import { fmtDuration } from "@/lib/format";
 import { MONTHS } from "./constants";
-import { StravaCookie } from "@/app/constants/tokens";
-import { fetchAllActivities, pickActivityStats } from "./lib/activities";
+import { fetchAllActivities } from "../../../../../lib/activities";
 import { summarizeByMonth } from "./lib/aggregate";
+import { getStravaTokenOrThrow } from "@/lib/token";
 
 export default async function ActivitiesPage({
   params,
@@ -22,8 +22,7 @@ export default async function ActivitiesPage({
   params?: Promise<{ year?: string }>;
 }) {
   const sp = (await params) ?? {};
-  const cookieStore = await cookies();
-  const token = cookieStore.get(StravaCookie.AccessToken)?.value;
+  const token = await getStravaTokenOrThrow();
 
   if (!token) redirect("/?no_token");
 
@@ -42,8 +41,8 @@ export default async function ActivitiesPage({
 
   const activities = await fetchAllActivities(token, after, before);
 
-  const filtered = activities.map(pickActivityStats);
-  console.log("Filtered Activities:", filtered.slice(0, 100));
+  //const filtered = activities.map(pickActivityStats);
+  //console.log("Filtered Activities:", filtered.slice(0, 100));
 
   // Group by month
   const months = summarizeByMonth(activities);

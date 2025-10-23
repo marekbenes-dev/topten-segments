@@ -1,6 +1,6 @@
-import SegMapLeaflet from "@/app/components/segments/SegMapLeaflet";
 import SegmentHistoryCard from "@/app/components/segments/SegmentHistoryCard";
 import { StravaCookie } from "@/app/constants/tokens";
+import { DetailedSegment } from "@/app/types/segment";
 import { fmtDuration } from "@/lib/format";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";

@@ -1,77 +1,48 @@
 import { NextResponse, NextRequest } from "next/server";
-import { cookies } from "next/headers";
-import { StravaCookie } from "@/app/constants/tokens";
+import { toEpochSeconds } from "@/app/(authed)/(shell)/activities/[year]/lib";
+import { fetchWindowPaged } from "@/lib/activities";
+import { getStravaTokenOrThrow } from "@/lib/token";
 
 export const dynamic = "force-dynamic";
-
-async function stravaGet(url: string, token: string) {
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: "no-store",
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`GET ${url} failed: ${res.status} ${text}`);
-  }
-  return res.json();
-}
-
-function parseDateRange(from?: string, to?: string) {
-  const fromIso = from ? new Date(`${from}T00:00:00Z`) : undefined;
-  const toIso = to ? new Date(`${to}T23:59:59.999Z`) : undefined;
-  return { fromIso, toIso };
-}
 
 export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
-    const q = (url.searchParams.get("q") || "").trim();
+    const activityName = (url.searchParams.get("activityName") || "").trim();
     const from = url.searchParams.get("from") || "";
     const to = url.searchParams.get("to") || "";
+    const beforeEpoch = toEpochSeconds(new Date(from));
+    const afterEpoch = toEpochSeconds(new Date(to));
 
-    const hasSearch = Boolean(q || from || to);
+    const hasSearch = Boolean(activityName || from || to);
+
     if (!hasSearch) {
       return NextResponse.json({ matches: [], total: 0 });
     }
 
-    const token =
-      (await cookies()).get(StravaCookie.AccessToken)?.value ||
-      process.env.STRAVA_TOKEN;
+    const token = await getStravaTokenOrThrow();
+
     if (!token) {
       return NextResponse.json(
-        { error: "Missing Strava token cookie or STRAVA_TOKEN env." },
+        { error: "Missing Strava token cookie." },
         { status: 401 },
       );
     }
 
-    // Fetch all activities (paged)
-    const perPage = 200;
-    let page = 1;
-    const all: SummaryActivity[] = [];
+    // Fetch all activities within epoch range
+    const activities = await fetchWindowPaged(
+      token,
+      beforeEpoch,
+      afterEpoch,
+      {},
+    );
 
-    while (true) {
-      const api = `https://www.strava.com/api/v3/athlete/activities?per_page=${perPage}&page=${page}`;
-      const batch = await stravaGet(api, token);
-      if (!Array.isArray(batch) || batch.length === 0) break;
-      all.push(...batch);
-      if (batch.length < perPage) break;
-      page += 1;
-      // polite pacing
-      await new Promise((r) => setTimeout(r, 120));
-    }
+    // Filter by name
+    const qlc = activityName.toLowerCase();
 
-    // Filter by name + date inclusive
-    const qlc = q.toLowerCase();
-    const { fromIso, toIso } = parseDateRange(from, to);
-
-    const matches = all.filter((a) => {
-      const nameOk = q ? a?.name?.toLowerCase().includes(qlc) : true;
-      const when = a?.start_date ? new Date(a.start_date) : undefined;
-      const fromOk = fromIso ? !!when && when >= fromIso : true;
-      const toOk = toIso ? !!when && when <= toIso : true;
-      return nameOk && fromOk && toOk;
-    });
+    const matches = activities.filter(({ name }) =>
+      name.toLowerCase().includes(qlc),
+    );
 
     // Return lean fields you need in the client
     return NextResponse.json({

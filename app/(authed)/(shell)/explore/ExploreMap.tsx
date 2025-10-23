@@ -10,6 +10,7 @@ import {
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { useEffect, useMemo } from "react";
+import { ExploreSegment } from "./types/types";
 
 function FitBounds({ points }: { points: [number, number][] }) {
   const map = useMap();
@@ -30,8 +31,7 @@ export default function ExploreMap({
   const fallbackCenter: [number, number] = [50.08, 14.43];
 
   const points = useMemo(
-    () =>
-      segments.map((s) => s.start_latlng).filter(Boolean) as [number, number][],
+    () => segments.map((s) => s.start_latlng).filter(Boolean),
     [segments],
   );
 
