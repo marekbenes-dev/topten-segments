@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import { StravaCookie } from "@/app/constants/tokens";
+import type { SummaryActivity } from "@/app/types/activity";
 
 export const dynamic = "force-dynamic";
 

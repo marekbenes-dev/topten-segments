@@ -10,6 +10,7 @@ import {
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { useEffect, useMemo } from "react";
+import type { ExploreSegment } from "./types/types";
 
 function FitBounds({ points }: { points: [number, number][] }) {
   const map = useMap();

@@ -7,10 +7,9 @@ interface RefactorActivitiesLayoutProps {
 }
 
 export default function RefactorActivitiesLayout({
-  children, // unused (no leaf page under the segment)
   results,
   form,
-}: RefactorActivitiesLayoutProps) {
+}: Omit<RefactorActivitiesLayoutProps, "children">) {
   return (
     <div className="container mx-auto p-6 max-w-6xl">
       <h1 className="text-2xl font-bold">Batch Activity Refactor</h1>

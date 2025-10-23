@@ -1,6 +1,6 @@
 // Group activities by month (use start_date_local to reflect user's local month)
 type TypeTotals = { distance: number; moving: number; count: number };
-type MonthSummary = {
+export type MonthSummary = {
   avgPaceRuns?: string | null;
   monthIdx: number; // 0..11
   totals: { distance: number; moving: number; count: number };
@@ -11,7 +11,7 @@ type MonthSummary = {
   items: SummaryActivity[];
 };
 
-type SummaryActivity = {
+export type SummaryActivity = {
   id: number;
   name: string;
   type: string; // "Run" | "Ride" | "Walk" | ...

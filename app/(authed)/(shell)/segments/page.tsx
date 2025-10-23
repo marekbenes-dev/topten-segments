@@ -1,9 +1,9 @@
-import SegMapLeaflet from "@/app/components/segments/SegMapLeaflet";
 import SegmentHistoryCard from "@/app/components/segments/SegmentHistoryCard";
 import { StravaCookie } from "@/app/constants/tokens";
 import { fmtDuration } from "@/lib/format";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import type { DetailedSegment } from "@/app/types/segment";
 
 async function getStarredSegments(accessToken: string) {
   const res = await fetch(
